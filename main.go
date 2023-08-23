@@ -8,8 +8,12 @@ import (
 )
 
 func main() {
+	// sockets handler
+	var sock api.Sockets
+
 	// use api.Greetings on every call to /api/
 	http.HandleFunc("/api/", api.Greetings)
+	http.Handle("/api/ws/", &sock)
 
 	// print to terminal that server started
 	fmt.Printf("Started PacMacro; listening on localhost:8000...\n")
