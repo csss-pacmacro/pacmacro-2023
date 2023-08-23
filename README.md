@@ -19,8 +19,8 @@ For the deployment of PacMacro, the static files can be served wherever (e.g., G
 
 ### API
 
-To build the PacMacro API, run `go build main` from the root directory of this repo.
-Start the API in a detachable terminal (e.g., `tmux`), and ensure that your web server is proxying the API under a `api/` directory.
+To build the PacMacro API, run `go build ./main.go` from the root directory of this repo.
+Start the API in a detachable terminal (e.g., `tmux`), and ensure that it is proxied properly.
 
 ### Frontend
 
