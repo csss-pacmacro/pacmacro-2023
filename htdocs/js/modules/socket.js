@@ -13,11 +13,6 @@ function initWS() {
 		// log API message
 		console.log(e.data);
 	});
-
-	// every second, say "Hello!" to the API
-	setInterval(() => {
-		window.pacmacro_ws.send("Hello!");
-	}, 1000);
 }
 
 export { initWS };

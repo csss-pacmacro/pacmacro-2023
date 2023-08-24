@@ -20,51 +20,15 @@ var upgrader = ws.Upgrader{
 }
 
 type Sockets struct {
-	NextID uint64
-	//Nclients uint64
-	Mutex sync.Mutex
+	sessions *Sessions
+	mutex sync.Mutex
 }
 
-func (s *Sockets) Init() {
-	// no need to lock mutex; no clients should be open yet.
-	s.NextID = 0;
-	//s.Nclients = 0;
+func (s *Sockets) Init(sessions *Sessions) {
+	s.sessions = sessions
 
 	fmt.Print("Initialized Sockets.\n")
 }
-
-func (s *Sockets) GetID() uint64 {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-
-	ID := s.NextID
-	s.NextID++
-	return ID
-}
-
-// presently redundant
-/*
-func (s *Sockets) Increase() {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-
-	s.Nclients++
-}
-
-func (s *Sockets) Decrease() {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-
-	s.Nclients--
-}
-
-func (s *Sockets) Nclients() uint64 {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-
-	return s.Nclients
-}
-*/
 
 func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// attempt to upgrade connection to websocket connection
@@ -75,10 +39,7 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//s.Increase()
-	//defer s.Decrease()
-
-	ID := s.GetID()
+	ID := s.sessions.New(TypeFroshee, RepsPacman, StatusConn, "PASSWORD")
 
 	fmt.Printf("Sockets: ID %v: Connection opened.\n", ID)
 
@@ -105,4 +66,7 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// TODO: keep track of client's positions through messages
 	}
+
+	// disconnect this session
+	s.sessions.SetStatus(ID, StatusDisc)
 }

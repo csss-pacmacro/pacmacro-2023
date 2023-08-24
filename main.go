@@ -8,11 +8,17 @@ import (
 )
 
 func main() {
-	// sockets handler
-	var sock api.Sockets
+	var (
+		// sessions
+		sessions api.Sessions
+		// sockets
+		sock api.Sockets
+	)
+
+	sock.Init(&sessions)
 
 	// use api.Greetings on every call to /api/
-	http.HandleFunc("/api/", api.Greetings)
+	http.Handle("/api/sessions.json", &sessions)
 	http.Handle("/api/ws/", &sock)
 
 	// print to terminal that server started
