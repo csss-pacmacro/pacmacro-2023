@@ -20,14 +20,14 @@ var upgrader = ws.Upgrader{
 }
 
 type Sockets struct {
-	sessions *Sessions
+	players *Players
 	mutex sync.Mutex
 }
 
-func (s *Sockets) Init(sessions *Sessions) {
-	s.sessions = sessions
+func (s *Sockets) Init(players *Players) {
+	s.players = players
 
-	fmt.Print("Initialized Sockets.\n")
+	fmt.Print("Sockets handler initialized.\n")
 }
 
 func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +39,7 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ID := s.sessions.New(TypeFroshee, RepsPacman, StatusConn, "PASSWORD")
+	ID := s.players.New(TypeFroshee, RepsPacman, StatusConn, "PASSWORD")
 
 	fmt.Printf("Sockets: ID %v: Connection opened.\n", ID)
 
@@ -67,6 +67,6 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// TODO: keep track of client's positions through messages
 	}
 
-	// disconnect this session
-	s.sessions.SetStatus(ID, StatusDisc)
+	// disconnect this player
+	s.players.SetStatus(ID, StatusDisc)
 }

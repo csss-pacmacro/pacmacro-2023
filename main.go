@@ -1,24 +1,30 @@
 package main
 
 import (
+	"math/rand"
+	"time"
 	"net/http"
-	"log"
 	"fmt"
+	"log"
+
 	"pacmacro/api"
 )
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 	var (
-		// sessions
-		sessions api.Sessions
-		// sockets
-		sock api.Sockets
+		players api.Players
+		game    api.Game
+		sock    api.Sockets
 	)
 
-	sock.Init(&sessions)
+	game.Init(&players) // initialize game handler
+	sock.Init(&players) // initialize sockets handler
 
-	// use api.Greetings on every call to /api/
-	http.Handle("/api/sessions.json", &sessions)
+	http.Handle("/api/player/", &players) // /api/player/register; /api/player/list.json
+	http.Handle("/api/game/", &game) // /api/game/map.json; /api/game/set/ID
 	http.Handle("/api/ws/", &sock)
 
 	// print to terminal that server started
