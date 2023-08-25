@@ -25,14 +25,15 @@ func max(a, b float64) float64 {
 }
 
 type coordinate struct {
-	lat  float64 `json:"latitude"`
-	long float64 `json:"longitude"`
+	lat  float64 `json:"lat"`
+	long float64 `json:"long"`
 }
 
 type message struct {
-	lat  float64 `json:"latitude"`
-	long float64 `json:"longitude"`
-	cmd  string  `json:"command"`
+	Lat  float64 `json:"latitude"`
+	Long float64 `json:"longitude"`
+	Cmd  string  `json:"command"`
+	Data string  `json:"data"`
 }
 
 type Game struct {
@@ -92,19 +93,29 @@ func (g *Game) ServeSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var minCoord, maxCoord coordinate
+	fmt.Print("Game\tServeSet (/api/game/set/):\tConnection opened.\n")
+	conn.WriteMessage(ws.TextMessage, []byte("Please provide admin password."))
+
+	var (
+		authorized         bool
+		nattempts          int
+		firstCoordinate    bool
+		minCoord, maxCoord coordinate
+	)
+
+	firstCoordinate = true
 
 	// hold connection open; receive location information
 	for {
 		// receive message from connection
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil || msgType == ws.CloseMessage {
-			fmt.Print("Game\tServeSet (/api/game/set/):\tConnect closed ")
+			fmt.Print("Game\tServeSet (/api/game/set/):\tConnection closed")
 
 			if err != nil {
-				fmt.Printf("by error: %v.\n", err)
+				fmt.Printf(": %v.\n", err)
 			} else {
-				fmt.Print("by user.\n")
+				fmt.Print(" by user.\n")
 			}
 
 			break
@@ -112,20 +123,60 @@ func (g *Game) ServeSet(w http.ResponseWriter, r *http.Request) {
 
 		var parsed message
 
-		if json.Unmarshal(msg, parsed) != nil {
-			fmt.Print("Game\tServeSet (/api/game/set/):\tReceived non-JSON message; ignoring.\n")
+		if err = json.Unmarshal(msg, &parsed); err != nil {
+			fmt.Print("Game\tServeSet (/api/game/set/):\tCouldn't parse message: %v.\n", err)
 			continue
 		}
 
-		// find min and max values
-		minCoord.lat = min(minCoord.lat, parsed.lat)
-		minCoord.long = min(minCoord.long, parsed.long)
-		maxCoord.lat = max(maxCoord.lat, parsed.lat)
-		maxCoord.long = max(maxCoord.long, parsed.long)
+		if parsed.Cmd == "password" && parsed.Data == adminPassword {
+			fmt.Print("Game\tServeSet (/api/game/set/):\tAdmin authorized.\n")
+			authorized = true
+			continue
+		}
 
-		if parsed.cmd == "write" {
+		if !authorized {
+			fmt.Printf("Game\tServeSet (/api/game/set/):\tFailed authorization attempt; password was %q.\n", parsed.Data)
+			nattempts++
+
+			if nattempts > maxAttempts {
+				fmt.Print("Game\tServeSet (/api/game/set/):\tExceeded max attempts.\n")
+				conn.WriteMessage(ws.CloseMessage, []byte("Exceeded max attempts."))
+				break
+			}
+
+			continue
+		}
+
+		if parsed.Cmd == "location" {
+			if firstCoordinate {
+				minCoord.lat = parsed.Lat
+				minCoord.long = parsed.Long
+				maxCoord.lat = parsed.Lat
+				maxCoord.long = parsed.Long
+
+				firstCoordinate = false
+			} else {
+				// find min and max values
+				minCoord.lat = min(minCoord.lat, parsed.Lat)
+				minCoord.long = min(minCoord.long, parsed.Long)
+				maxCoord.lat = max(maxCoord.lat, parsed.Lat)
+				maxCoord.long = max(maxCoord.long, parsed.Long)
+			}
+
+			fmt.Print("Game\tServeSet (/api/game/set/):\tReceived coordinates.\n")
+		} else if parsed.Cmd == "write" {
 			g.minCoord = minCoord
 			g.maxCoord = maxCoord
+
+			msg := fmt.Sprintf("min-lat: %f; min-long: %f; max-lat: %f; max-long: %f.",
+				g.minCoord.lat, g.minCoord.long, g.maxCoord.lat, g.maxCoord.long)
+
+			fmt.Printf("Game\tServeSet (/api/game/set/):\tUpdated min/max coordinates:\n\t%s\n", msg)
+
+			// let admin know the set min/max coordinates
+			conn.WriteMessage(ws.TextMessage, []byte(msg))
+		} else {
+			fmt.Printf("Game\tServeSet (/api/game/set/):\tReceived strange command: %q; ignoring.\n", parsed.Cmd)
 		}
 	}
 }

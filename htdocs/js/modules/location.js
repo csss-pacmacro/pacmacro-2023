@@ -1,32 +1,26 @@
 // returns location as text (can be used for the innerHTML of an object).
-function watchLocation(element) {
+function watchLocation(update_func) {
 	// assume geolocation is disabled by default
-	element.innerHTML = "Waiting to receive position information...";
+	//element.innerHTML = "Waiting to receive position information...";
 
 	if ("geolocation" in navigator) {
-		navigator.geolocation.watchPosition(
+		if (window.pacmacro_geo !== undefined)
+			navigator.geolocation.clearWatch(window.pacmacro_geo);
+
+		window.pacmacro_geo = navigator.geolocation.watchPosition(
 		// on each update...
-		(p) => {
-			element.innerHTML = `
-				Latitude: ${p.coords.latitude};<br>
-				Longitude: ${p.coords.longitude};<br>
-				Altitude: ${p.coords.altitude};<br>
-				Speed: ${p.coords.speed}.
-			`;
-		},
+		update_func,
 		// in the event of an error...
-		(e) => {
-			element.innerHTML = `Error code ${e}.`
-		},
+		(e) => { console.log(`watchLocation error: ${e}.`) },
 		// watch options
 		{
 			maximumAge: 0, // don't stop watching
 			timeout: 5000,
 			enableHighAccuracy: true
 		}
-		); // watchPosition()
+		);
 	} else {
-		element.innerHTML = "Geolocation is disabled.";
+		//element.innerHTML = "Geolocation is disabled.";
 	}
 }
 

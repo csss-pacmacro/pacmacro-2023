@@ -63,6 +63,7 @@ const (
 	// password for admin to register with; CHANGE IN PRODUCTION
 	// NOTE: only the admin can make someone a leader
 	adminPassword = "1234"
+	maxAttempts   = 4 // max password attempts
 )
 
 // ID letters are hexadecimal characters

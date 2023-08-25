@@ -14,4 +14,4 @@ function connectWS(ID, func_recv) {
 	return true;
 }
 
-export { connectWS };
+export { URL_ROOT, connectWS };
