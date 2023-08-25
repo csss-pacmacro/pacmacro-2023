@@ -30,18 +30,42 @@ func (s *Sockets) Init(players *Players) {
 	fmt.Print("Sockets handler initialized.\n")
 }
 
+// WebSocket /api/ws/
 func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// attempt to upgrade connection to websocket connection
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
+	ID := r.URL.Path[8:]
+	player := s.players.Get(ID)
+
+	if player == nil {
+		http.Error(w,
+			http.StatusText(http.StatusBadRequest),
+			http.StatusBadRequest)
 		// print error
-		fmt.Printf("Bad connection: %v.\n", err)
+		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tBad Request; ID %q not registered.\n", ID)
 		return
 	}
 
-	ID := s.players.New(TypeFroshee, RepsPacman, StatusConn, "PASSWORD")
+	// attempt to upgrade connection to websocket connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w,
+			http.StatusText(http.StatusBadRequest),
+			http.StatusBadRequest)
+		// print error
+		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tBad connection: %v.\n", err)
+		return
+	}
 
-	fmt.Printf("Sockets: ID %v: Connection opened.\n", ID)
+	fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Connection opened.\n", ID)
+
+	if err = conn.WriteMessage(ws.TextMessage, []byte("Hello from the API!")); err != nil {
+		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tCouldn't write message to %q.\n", ID)
+		// attempt to close connection
+		conn.WriteMessage(ws.CloseMessage, []byte("Goodbye"))
+		return
+	}
+
+	s.players.SetStatus(ID, StatusConn)
+	defer s.players.SetStatus(ID, StatusDisc)
 
 	// hold connection open; receive location information
 	for {
@@ -49,12 +73,12 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		msgType, msg, err := conn.ReadMessage()
 		// check if either the connection failed or was closed
 		if err != nil || msgType == ws.CloseMessage {
-			fmt.Printf("Sockets: ID %v: Connection closed ", ID)
+			fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Connection closed", ID)
 
 			if err != nil {
-				fmt.Printf("by error: %v.\n", err)
+				fmt.Printf(": %v.\n", err)
 			} else {
-				fmt.Print("by user.")
+				fmt.Print(" by user.")
 			}
 
 			// exit loop; close goroutine
@@ -62,11 +86,8 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// print received message
-		fmt.Printf("Sockets: ID %v: Received message: %v.\n", ID, string(msg))
+		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Received message: %v.\n", ID, string(msg))
 
 		// TODO: keep track of client's positions through messages
 	}
-
-	// disconnect this player
-	s.players.SetStatus(ID, StatusDisc)
 }

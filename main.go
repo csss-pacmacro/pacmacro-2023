@@ -20,6 +20,7 @@ func main() {
 		sock    api.Sockets
 	)
 
+	players.Init() // initialize players handler
 	game.Init(&players) // initialize game handler
 	sock.Init(&players) // initialize sockets handler
 

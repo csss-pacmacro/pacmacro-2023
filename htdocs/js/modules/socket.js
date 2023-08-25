@@ -1,18 +1,17 @@
 // NOTE: change this in production!
 var URL_ROOT = "localhost:8080";
 
-function initWS() {
-	try {
-		window.pacmacro_ws = new WebSocket(`ws://${URL_ROOT}/api/ws/`);
-	} catch {
-		return;
-	}
+function connectWS(ID, func_recv) {
+	// calling function should run connectWS in a try-catch block
+	window.pacmacro_ws = new WebSocket(`ws://${URL_ROOT}/api/ws/${ID}`);
+
+	if (window.pacmacro_ws === undefined)
+		return false;
 
 	// received API message
-	window.pacmacro_ws.addEventListener("message", (e) => {
-		// log API message
-		console.log(e.data);
-	});
+	window.pacmacro_ws.addEventListener("message", func_recv);
+
+	return true;
 }
 
-export { initWS };
+export { connectWS };

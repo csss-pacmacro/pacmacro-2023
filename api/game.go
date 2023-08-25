@@ -55,8 +55,9 @@ func (g *Game) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if len(path) >= 4 && path[:4] == "set/" {
 		g.ServeSet(w, r)
 	} else {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		http.Error(w,
+			http.StatusText(http.StatusNotFound),
+			http.StatusNotFound)
 	}
 }
 
@@ -73,8 +74,9 @@ func (g *Game) ServeSet(w http.ResponseWriter, r *http.Request) {
 
 	// only admin users can set the game map
 	if player := g.players.Get(ID); player == nil || player.Type != TypeAdmin {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(http.StatusText(http.StatusUnauthorized)))
+		http.Error(w,
+			http.StatusText(http.StatusUnauthorized),
+			http.StatusUnauthorized)
 		return
 	}
 
@@ -86,7 +88,7 @@ func (g *Game) ServeSet(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// print error
-		fmt.Printf("Game ServeSet: Bad connection: %v.\n", err)
+		fmt.Printf("Game\tServeSet (/api/game/set/):\tBad connection: %v.\n", err)
 		return
 	}
 
@@ -97,7 +99,7 @@ func (g *Game) ServeSet(w http.ResponseWriter, r *http.Request) {
 		// receive message from connection
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil || msgType == ws.CloseMessage {
-			fmt.Print("Game ServeSet: Connect closed ")
+			fmt.Print("Game\tServeSet (/api/game/set/):\tConnect closed ")
 
 			if err != nil {
 				fmt.Printf("by error: %v.\n", err)
@@ -111,7 +113,7 @@ func (g *Game) ServeSet(w http.ResponseWriter, r *http.Request) {
 		var parsed message
 
 		if json.Unmarshal(msg, parsed) != nil {
-			fmt.Print("Game ServeSet: Received non-JSON message; ignoring.\n")
+			fmt.Print("Game\tServeSet (/api/game/set/):\tReceived non-JSON message; ignoring.\n")
 			continue
 		}
 
