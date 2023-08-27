@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Admin Utilities | PacMacro</title>
+		<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+		<link rel="stylesheet" href="css/main.css">
+		<script type="module" src="js/admin.js"></script>
+	</head>
+	<body>
+		<h1>Admin Utilities</h1>
+
+		<label for="admin-id">Admin ID</label>
+		<input name="admin-id" id="admin-id" type="text"></input>
+		<label for="admin-pass">Admin Password</label>
+		<input name="admin-pass" id="admin-pass" type="password"></input>
+		<br>
+		<button id="load-id">Load ID from Cookie</button>
+
+		<hr>
+		<!-- register the admin -->
+		<h2>Register</h2>
+		<p>(Please set the Admin Password above but leave Admin ID blank.)</p>
+
+		<button id="register-button">Register</button>
+		<p id="register-status">...</p>
+
+		<hr>
+		<!-- set map bounds -->
+		<h2>Set Map</h2>
+
+		<button id="location-open-button">Open WS</button>
+		<button id="location-write-button">Write Map</button>
+		<button id="location-close-button">Close Connection</button>
+		<p id="location-status">...</p>
+	</body>
+</html>

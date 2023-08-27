@@ -63,15 +63,16 @@ var id_letters = []rune("0123456789ABCDEF")
 
 // zero-value player: froshee, pacman, disconnected
 type Player struct {
+	pass string // password
+
 	Type   uint64 `json:"type"`
 	Reps   uint64 `json:"reps"` // represents
 	Status uint64 `json:"status"`
-	pass   string `json:"pass"` // password
 }
 
 // attempts to log in the user with the provided password
-func (p *Player) Login(_pass string) bool {
-	return p.pass == _pass
+func (p *Player) Login(pass string) bool {
+	return p.pass == pass
 }
 
 func (p *Player) Format(ID string) string {
@@ -91,7 +92,7 @@ func (p *Players) Init() {
 	fmt.Print("Players handler initialized.\n")
 }
 
-func (p *Players) New(_type uint64, _reps uint64, _status uint64, _pass string) string {
+func (p *Players) New(t uint64, reps uint64, status uint64, pass string) string {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -116,10 +117,10 @@ func (p *Players) New(_type uint64, _reps uint64, _status uint64, _pass string) 
 	p.players[ID] = new(Player)
 	// no need to check if it was found; we just inserted it
 	player, _ := p.players[ID]
-	player.Type = _type
-	player.Reps = _reps
-	player.Status = _status
-	player.pass = _pass
+	player.Type = t
+	player.Reps = reps
+	player.Status = status
+	player.pass = pass
 
 	return ID
 }
@@ -142,7 +143,7 @@ func (p *Players) Get(ID string) *Player {
 	}
 }
 
-// /api/player/
+// /api/player/*
 func (p *Players) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[12:]
 
@@ -184,25 +185,25 @@ func (p *Players) ServeRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		_type     int
-		_pass, ID string
+		t        int
+		pass, ID string
 	)
 
-	_type, err := strconv.Atoi(r.FormValue("type"))
-	_pass = r.FormValue("pass")
+	t, err := strconv.Atoi(r.FormValue("type"))
+	pass = r.FormValue("pass")
 
 	if err != nil || // invalid form data
-		_type < 0 || _type > TypeAdmin || // validate type
-		len(_pass) == 0 || len(_pass) > MaxPassLength { // validate pass
+		t < 0 || t > TypeAdmin || // validate type
+		len(pass) == 0 || len(pass) > MaxPassLength { // validate pass
 		http.Error(w,
 			http.StatusText(http.StatusBadRequest),
 			http.StatusBadRequest)
 		return
 	}
 
-	if _type == TypeAdmin {
+	if t == TypeAdmin {
 		// registering as admin requires the admin password
-		if p.adminRegistered || _pass != adminPassword {
+		if p.adminRegistered || pass != adminPassword {
 			http.Error(w,
 				http.StatusText(http.StatusUnauthorized),
 				http.StatusUnauthorized)
@@ -212,14 +213,14 @@ func (p *Players) ServeRegister(w http.ResponseWriter, r *http.Request) {
 		// admin is registered successfully
 		p.adminRegistered = true
 
-		ID = p.New(TypeAdmin, RepsNothing, StatusDisc, _pass)
-	} else if _type == TypeLeader {
+		ID = p.New(TypeAdmin, RepsNothing, StatusDisc, pass)
+	} else if t == TypeLeader {
 		// register leader as a froshee watcher;
 		// remains invalid until admin changes type to leader.
-		ID = p.New(TypeFroshee, RepsWatcher, StatusDisc, _pass)
+		ID = p.New(TypeFroshee, RepsWatcher, StatusDisc, pass)
 	} else {
 		// register froshee into the game
-		ID = p.New(TypeFroshee, RepsNothing, StatusDisc, _pass)
+		ID = p.New(TypeFroshee, RepsNothing, StatusDisc, pass)
 	}
 
 	player := p.Get(ID)

@@ -11,7 +11,7 @@ import (
 
 type Sockets struct {
 	players *Players
-	mutex sync.Mutex
+	mutex   sync.Mutex
 }
 
 func (s *Sockets) Init(players *Players) {
@@ -20,7 +20,7 @@ func (s *Sockets) Init(players *Players) {
 	fmt.Print("Sockets handler initialized.\n")
 }
 
-// WebSocket /api/ws/
+// WS /api/ws/<ID>
 func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ID := r.URL.Path[8:]
 	player := s.players.Get(ID)

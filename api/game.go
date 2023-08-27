@@ -9,7 +9,12 @@ import (
 
 type Game struct {
 	players            *Players
-	minCoord, maxCoord Coordinate
+
+	Min    Coordinate `json:"min"`
+	Max    Coordinate `json:"max"`
+	Width  uint64     `json:"width"`
+	Height uint64     `json:"height"`
+	Map    []uint64   `json:"map"`
 }
 
 func (g *Game) Init(players *Players) {
