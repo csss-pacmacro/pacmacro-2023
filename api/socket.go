@@ -1,3 +1,5 @@
+// socket.go
+
 package api
 
 import (
@@ -6,18 +8,6 @@ import (
 	"sync"
 	ws "github.com/gorilla/websocket"
 )
-
-var upgrader = ws.Upgrader{
-	ReadBufferSize: 1024,
-	WriteBufferSize: 1024,
-	// /*
-	// FOR DEVELOPMENT: ALLOWS SERVER TO CONNECT TO ITSELF.
-	// REMOVE FOR PRODUCTION
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-	// */
-}
 
 type Sockets struct {
 	players *Players
@@ -45,7 +35,7 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// attempt to upgrade connection to websocket connection
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w,
 			http.StatusText(http.StatusBadRequest),

@@ -1,3 +1,5 @@
+// player.go
+
 package api
 
 import (
@@ -54,18 +56,8 @@ const (
 	StatusDisc = 1 // user is disconnected; await re-connection
 	StatusConn = 2 // user is connected
 
-	// length of a session ID
-	id_length  = 4
-
-	// maximum password length
-	MaxPassLength = 8
-
-	// password for admin to register with; CHANGE IN PRODUCTION
-	// NOTE: only the admin can make someone a leader
-	adminPassword = "1234"
-	maxAttempts   = 4 // max password attempts
+	id_length  = 4 // length of a session ID
 )
-
 // ID letters are hexadecimal characters
 var id_letters = []rune("0123456789ABCDEF")
 

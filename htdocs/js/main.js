@@ -38,21 +38,33 @@ window.onload = async () => {
 		});
 
 		// attempt to log-in
-		window.pacmacro_set_ws.send(`{
-			"latitude": 0,
-			"longitude": 0,
-			"command": "password",
-			"data": "1234"
-		}`);
+		window.pacmacro_set_ws.send(
+// -------------<
+`{
+	"coordinate": {
+		"latitude": 0,
+		"longitude": 0
+	},
+	"command": "password",
+	"data": "1234"
+}`
+// -------------<
+		);
 
 		// watch location and pass it along to the server
 		watchLocation((p) => {
-			window.pacmacro_set_ws.send(`{
-				"latitude": ${p.coords.latitude},
-				"longitude": ${p.coords.longitude},
-				"command": "location",
-				"data": ""
-			}`);
+			window.pacmacro_set_ws.send(
+// ---------------------<
+`{
+	"coordinate": {
+		"latitude": ${p.coords.latitude},
+		"longitude": ${p.coords.longitude}
+	},
+	"command": "location",
+	"data": ""
+}`
+// ---------------------<
+			);
 		});
 	}
 
@@ -85,7 +97,7 @@ window.onload = async () => {
 
 		location_p.innerHTML = "Connecting...";
 
-		window.pacmacro_set_ws = new WebSocket(`ws://${URL_ROOT}/api/game/set/${ID}`);
+		window.pacmacro_set_ws = new WebSocket(`ws://${URL_ROOT}/api/admin/set/${ID}`);
 		window.pacmacro_set_ws.onopen = set_ws_open;
 		window.pacmacro_set_ws.onclose = set_ws_close;
 	};
@@ -94,12 +106,18 @@ window.onload = async () => {
 		if (window.pacmacro_set_ws === undefined)
 			return;
 
-		window.pacmacro_set_ws.send(`{
-			"latitude": 0,
-			"longitude": 0,
-			"command": "write",
-			"data": ""
-		}`);
+		window.pacmacro_set_ws.send(
+// -------------<
+`{
+	"coordinate": {
+		"latitude": 0,
+		"longitude": 0
+	},
+	"command": "write",
+	"data": ""
+}`
+// -------------<
+		);
 	}
 
 	lclose_button.onclick = set_ws_close;
