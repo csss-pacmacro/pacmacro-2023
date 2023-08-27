@@ -49,6 +49,7 @@ var Upgrader = ws.Upgrader{
 	"longitude": 0
 } */
 type Coordinate struct {
+	// public
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
@@ -61,6 +62,7 @@ type Coordinate struct {
 	"data": ""
 } */
 type Message struct {
+	// public
 	Coord   Coordinate `json:"coordinate"`
 	Command string     `json:"command"`
 	Data    string     `json:"data"`

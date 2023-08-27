@@ -10,6 +10,7 @@ import (
 )
 
 type Sockets struct {
+	// private
 	players *Players
 	mutex   sync.Mutex
 }

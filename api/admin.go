@@ -12,6 +12,7 @@ import (
 )
 
 type Admin struct {
+	// private
 	game    *Game
 	players *Players
 	mutex   sync.Mutex
@@ -72,7 +73,7 @@ func (a *Admin) ServeScale(w http.ResponseWriter, r *http.Request) {
 	var wi, h int
 
 	wi, err := strconv.Atoi(r.FormValue("width"))
-	if err != nil {
+	if err == nil {
 		h, err = strconv.Atoi(r.FormValue("height"))
 	}
 	pass = r.FormValue("pass")
@@ -87,6 +88,11 @@ func (a *Admin) ServeScale(w http.ResponseWriter, r *http.Request) {
 
 	a.game.Width = uint64(wi)
 	a.game.Height = uint64(h)
+
+	fmt.Printf("Admin\tServeScale (/api/admin/scale)\tChanged map scale; width: %d, height: %d.\n", wi, h)
+
+	// redirect as successful
+	http.Redirect(w, r, "/admin.html?status=ok", http.StatusFound)
 }
 
 // POST /api/admin/populate
@@ -139,7 +145,7 @@ func (a *Admin) ServePopulate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Admin\tServePopulate (/api/admin/populate)\tPopulated map;\n" +
-		"----BEGIN MAP DATA\n%+v\n----END MAP DATA", a.game.Map)
+		"----BEGIN MAP DATA\n%+v\n----END MAP DATA\n", a.game.Map)
 }
 
 // WS /api/admin/set/<ID>

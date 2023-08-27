@@ -63,8 +63,10 @@ var id_letters = []rune("0123456789ABCDEF")
 
 // zero-value player: froshee, pacman, disconnected
 type Player struct {
+	// private
 	pass string // password
 
+	// public
 	Type   uint64 `json:"type"`
 	Reps   uint64 `json:"reps"` // represents
 	Status uint64 `json:"status"`
@@ -147,10 +149,13 @@ func (p *Players) Get(ID string) *Player {
 func (p *Players) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[12:]
 
+	// GET /api/player/list.json
 	if path == "list.json" {
 		p.ServeList(w, r)
+	// POST /api/player/register
 	} else if path == "register" {
 		p.ServeRegister(w, r)
+	// /api/player/*
 	} else {
 		http.Error(w,
 			http.StatusText(http.StatusNotFound),
@@ -158,6 +163,7 @@ func (p *Players) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GET /api/player/list.json
 func (p *Players) ServeList(w http.ResponseWriter, r *http.Request) {
 	ret := "[\n"
 

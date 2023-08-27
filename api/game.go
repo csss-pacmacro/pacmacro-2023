@@ -5,11 +5,14 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"encoding/json"
 )
 
 type Game struct {
-	players            *Players
+	// private
+	players *Players
 
+	// public
 	Min    Coordinate `json:"min"`
 	Max    Coordinate `json:"max"`
 	Width  uint64     `json:"width"`
@@ -25,8 +28,28 @@ func (g *Game) Init(players *Players) {
 
 // /api/game/*
 func (g *Game) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO: API calls for /api/game/*
-	http.Error(w,
-		http.StatusText(http.StatusNotFound),
-		http.StatusNotFound)
+	path := r.URL.Path[10:]
+
+	// GET /api/game/map.json
+	if path == "map.json" {
+		g.ServeMap(w, r)
+	// /api/game/*
+	} else {
+		http.Error(w,
+			http.StatusText(http.StatusNotFound),
+			http.StatusNotFound)
+	}
+}
+
+// GET /api/game/map.json
+func (g *Game) ServeMap(w http.ResponseWriter, r *http.Request) {
+	JSON, err := json.Marshal(g)
+	if err != nil {
+		http.Error(w,
+			http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(JSON)
 }

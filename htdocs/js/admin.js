@@ -22,8 +22,8 @@ window.onload = async () => {
 
 	/* REGISTRATION */
 
-	let register_button  = document.getElementById("register-button");
-	let register_p       = document.getElementById("register-status");
+	let register_button = document.getElementById("register-button");
+	let register_status = document.getElementById("register-status");
 
 	register_button.onclick = async () => {
 		const form = new FormData();
@@ -41,7 +41,7 @@ window.onload = async () => {
 			});
 		} catch {
 			// on fetch error
-			register_p.innerHTML = "Error";
+			register_status.innerHTML = "Error";
 		}
 
 		if (resp.ok) {
@@ -50,63 +50,59 @@ window.onload = async () => {
 			// store ID in cookie
 			document.cookie = `id=${ID}`;
 
-			register_p.innerHTML = ID;
+			register_status.innerHTML = ID;
 		} else
 			// on form error
-			register_p.innerHTML = `${resp.status}`;
+			register_status.innerHTML = `${resp.status}`;
 	};
 
 	/* LOCATION */
 
-	let lopen_button  = document.getElementById("location-open-button");
-	let lwrite_button = document.getElementById("location-write-button");
-	let lclose_button = document.getElementById("location-close-button");
-	let location_p    = document.getElementById("location-status");
+	let lopen_button    = document.getElementById("location-open-button");
+	let lwrite_button   = document.getElementById("location-write-button");
+	let lclose_button   = document.getElementById("location-close-button");
+	let location_status = document.getElementById("location-status");
 
 	// on connection opened
 	let set_ws_open = () => {
-		location_p.innerHTML = "Connected.";
+		location_status.innerHTML = "Connected.";
 
 		// on server message
 		window.pacmacro_set_ws.addEventListener("message", (e) => {
 			// show server message in status
-			location_p.innerHTML = e.data;
+			location_status.innerHTML = e.data;
 		});
 
+		let log_in = {
+			"coordinate": {
+				"latitude": 0,
+				"longitude": 0
+			},
+			"command": "password",
+			"data": admin_pass.value
+		}
+
 		// send log-in information
-		window.pacmacro_set_ws.send(
-// -------------<
-`{
-	"coordinate": {
-		"latitude": 0,
-		"longitude": 0
-	},
-	"command": "password",
-	"data": "${admin_pass.value}"
-}`
-// -------------<
-		);
+		window.pacmacro_set_ws.send(JSON.stringify(log_in));
 
 		// watch location and pass it along to the server
 		watchLocation((p) => {
-			window.pacmacro_set_ws.send(
-// ---------------------<
-`{
-	"coordinate": {
-		"latitude": ${p.coords.latitude},
-		"longitude": ${p.coords.longitude}
-	},
-	"command": "location",
-	"data": ""
-}`
-// ---------------------<
-			);
+			let msg = {
+				"coordinate": {
+					"latitude": p.coords.latitude,
+					"longitude": p.coords.longitude
+				},
+				"command": "location",
+				"data": ""
+			}
+
+			window.pacmacro_set_ws.send(JSON.stringify(msg));
 		});
 	} // set_ws_open
 
 	// on connection closed
 	let set_ws_close = () => {
-		location_p.innerHTML = "Closed.";
+		location_status.innerHTML = "Closed.";
 
 		// stop watching location
 		if (navigator.geolocation !== undefined &&
@@ -125,7 +121,7 @@ window.onload = async () => {
 		if (window.pacmacro_set_ws !== undefined)
 			return; // websocket is already opened
 
-		location_p.innerHTML = "Connecting...";
+		location_status.innerHTML = "Connecting...";
 
 		// try to open connection
 		window.pacmacro_set_ws = new WebSocket(`ws://${URL_ROOT}/api/admin/set/${admin_id.value}`);
@@ -138,20 +134,94 @@ window.onload = async () => {
 		if (window.pacmacro_set_ws === undefined)
 			return; // there isn't an open connection
 
+		let msg = {
+			"coordinate": {
+				"latitude": 0,
+				"longitude": 0
+			},
+			"command": "write",
+			"data": ""
+		};
+
 		// send command to write data
-		window.pacmacro_set_ws.send(
-// -------------<
-`{
-	"coordinate": {
-		"latitude": 0,
-		"longitude": 0
-	},
-	"command": "write",
-	"data": ""
-}`
-// -------------<
-		);
+		window.pacmacro_set_ws.send(JSON.stringify(msg));
 	}; // lwrite_button.onclick
 
 	lclose_button.onclick = set_ws_close;
+
+	/* POPULATE */
+
+	let pgenerate_button = document.getElementById("populate-generate-button");
+	let psubmit_button   = document.getElementById("populate-submit-button");
+	let populate_status  = document.getElementById("populate-status");
+	let populate_table   = document.getElementById("populate-table");
+
+	// generate table for filling map data
+	pgenerate_button.onclick = async () => {
+		try {
+			window.pacmacro_map = await fetch("/api/game/map.json");
+		} catch {
+			populate_status.innerHTML = "Error";
+		}
+
+		window.pacmacro_map = await window.pacmacro_map.json();
+		console.log(window.pacmacro_map);
+		populate_table.innerHTML = ""; // clear populate table
+
+		let n = window.pacmacro_map.width * window.pacmacro_map.height;
+
+		// populate table
+		for (let i = 0; i < n; i++) {
+			// break to a new line for every (width) inputs
+			if (i % window.pacmacro_map.width == 0) {
+				let br = document.createElement("br");
+				populate_table.appendChild(br);
+			}
+
+			// append input box
+			let e = document.createElement("input");
+			e.setAttribute("type", "text");
+			e.setAttribute("size", "1");
+			e.value = "0"; // UnitEmpty
+			populate_table.appendChild(e);
+		}
+	};
+
+	psubmit_button.onclick = async () => {
+		let i = 0;
+		let n = window.pacmacro_map.width * window.pacmacro_map.height;
+		let s = "[";
+
+		for (const c of populate_table.children) {
+			if (c.tagName.toLowerCase() == "br")
+				continue;
+
+			i++;
+			s += `${c.value}${i < n ? ',': ']'}`;
+		}
+
+		// s is now a JSON array storing map data
+
+		const form = new FormData();
+
+		form.append("id", admin_id.value);
+		form.append("pass", admin_pass.value);
+		form.append("map", s);
+
+		// post map data to API
+		let resp;
+		try {
+			resp = await fetch("/api/admin/populate", {
+				method: "POST",
+				body: form
+			});
+		} catch {
+			populate_status.innerHTML = "Error";
+		}
+
+		if (resp.ok)
+			populate_status.innerHTML = "Success";
+		else
+			populate_status.innerHTML = `${resp.status}`;
+	};
 };
