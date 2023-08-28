@@ -2,10 +2,13 @@
 
 import {
 	URL_ROOT,
+	EXPAND_X, EXPAND_Y,
 	pacmacro_reset,
 	getID,
 	connectWS,
-	watchLocation
+	watchLocation,
+	stopWatchLocation,
+	convertCoords
 } from "./pacmacro.js";
 
 window.onload = async () => {
@@ -105,9 +108,7 @@ window.onload = async () => {
 		location_status.innerHTML = "Closed.";
 
 		// stop watching location
-		if (navigator.geolocation !== undefined &&
-			window.pacmacro_geo !== undefined)
-			navigator.geolocation.clearWatch(window.pacmacro_geo);
+		stopWatchLocation();
 
 		if (window.pacmacro_set_ws !== undefined) {
 			// close connection ourselves (on lclose_button.onclick())
@@ -152,9 +153,11 @@ window.onload = async () => {
 	/* POPULATE */
 
 	let pgenerate_button = document.getElementById("populate-generate-button");
+	let pdrawpath_button = document.getElementById("populate-draw-path-button");
+	let pstopdraw_button = document.getElementById("populate-stop-draw-button");
 	let psubmit_button   = document.getElementById("populate-submit-button");
 	let populate_status  = document.getElementById("populate-status");
-	let populate_table   = document.getElementById("populate-table");
+	let pacmacro_map     = document.getElementById("pacmacro-map");
 
 	// generate table for filling map data
 	pgenerate_button.onclick = async () => {
@@ -166,62 +169,56 @@ window.onload = async () => {
 
 		window.pacmacro_map = await window.pacmacro_map.json();
 		console.log(window.pacmacro_map);
-		populate_table.innerHTML = ""; // clear populate table
 
+		window.pacmacro_ctx = pacmacro_map.getContext("2d");
+		let ctx = window.pacmacro_ctx;
+
+		ctx.canvas.width = window.pacmacro_map.width * EXPAND_X;
+		ctx.canvas.height = window.pacmacro_map.height * EXPAND_Y;
+		ctx.fillStyle = "silver";
+		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+		let start_tile = 0, tile = 0;
 		let n = window.pacmacro_map.width * window.pacmacro_map.height;
 
-		// populate table
+		// fill map with grid
 		for (let i = 0; i < n; i++) {
-			// break to a new line for every (width) inputs
-			if (i % window.pacmacro_map.width == 0) {
-				let br = document.createElement("br");
-				populate_table.appendChild(br);
+			let x = i % window.pacmacro_map.width;
+			let y = Math.floor(i / window.pacmacro_map.width);
+
+			tile = tile == 1 ? 0 : 1;
+
+			if (x == 0) {
+				tile = start_tile;
+				start_tile = start_tile == 1 ? 0 : 1;
 			}
 
-			// append input box
-			let e = document.createElement("input");
-			e.setAttribute("type", "text");
-			e.setAttribute("size", "1");
-			e.value = "0"; // UnitEmpty
-			populate_table.appendChild(e);
+			let rendx = x * EXPAND_X;
+			let rendy = y * EXPAND_Y;
+
+			ctx.fillStyle = tile == 1 ? "gray" : "silver";
+			ctx.fillRect(rendx, rendy, rendx + EXPAND_X, rendy + EXPAND_Y);
 		}
 	};
 
+	pdrawpath_button.onclick = () => {
+		watchLocation((p) => {
+			let plot = convertCoords(window.pacmacro_map, p.coords.latitude, p.coords.longitude);
+
+			let ctx = window.pacmacro_ctx;
+			let rendx = plot.x * EXPAND_X;
+			let rendy = plot.y * EXPAND_Y;
+
+			ctx.fillStyle = "black";
+			ctx.fillRect(rendx, rendy, rendx+1, rendy+1);
+		});
+	};
+
+	pstopdraw_button.onclick = () => {
+		stopWatchLocation();
+	}
+
 	psubmit_button.onclick = async () => {
-		let i = 0;
-		let n = window.pacmacro_map.width * window.pacmacro_map.height;
-		let s = "[";
-
-		for (const c of populate_table.children) {
-			if (c.tagName.toLowerCase() == "br")
-				continue;
-
-			i++;
-			s += `${c.value}${i < n ? ',': ']'}`;
-		}
-
-		// s is now a JSON array storing map data
-
-		const form = new FormData();
-
-		form.append("id", admin_id.value);
-		form.append("pass", admin_pass.value);
-		form.append("map", s);
-
-		// post map data to API
-		let resp;
-		try {
-			resp = await fetch("/api/admin/populate", {
-				method: "POST",
-				body: form
-			});
-		} catch {
-			populate_status.innerHTML = "Error";
-		}
-
-		if (resp.ok)
-			populate_status.innerHTML = "Success";
-		else
-			populate_status.innerHTML = `${resp.status}`;
+		// do nothing
 	};
 };

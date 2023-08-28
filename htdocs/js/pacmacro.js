@@ -2,6 +2,8 @@
 
 // NOTE: change this in production
 var URL_ROOT = "localhost:8080";
+var EXPAND_X = 32;
+var EXPAND_Y = 32;
 
 // reset pacmacro
 function pacmacro_reset() {
@@ -9,6 +11,7 @@ function pacmacro_reset() {
 	window.pacmacro_set_ws = undefined;
 	window.pacmacro_ws = undefined;
 	window.pacmacro_geo = undefined;
+	window.pacmacro_ctx = undefined;
 }
 
 // get player ID from cookies
@@ -68,10 +71,38 @@ function watchLocation(update_func) {
 	return true;
 }
 
+function stopWatchLocation() {
+	if (navigator.geolocation !== undefined &&
+		window.pacmacro_geo !== undefined)
+		navigator.geolocation.clearWatch(window.pacmacro_geo);
+
+	window.pacmacro_geo = undefined;
+}
+
+function convertCoords(map, lat, lon) {
+	let plot = {
+		x: 0,
+		y: 0
+	};
+
+	let dlat = map.max.latitude - map.min.latitude;
+	let dlon = map.max.longitude - map.min.longitude;
+
+	plot.x = ((lon - map.min.longitude) / dlon) * map.width;
+	plot.y = ((lat - map.min.latitude) / dlat) * map.height;
+
+	console.log(`[${lat}, ${lon}] => [${plot.x}, ${plot.y}`);
+
+	return plot;
+}
+
 export {
 	URL_ROOT,
+	EXPAND_X, EXPAND_Y,
 	pacmacro_reset,
 	getID,
 	connectWS,
-	watchLocation
+	watchLocation,
+	stopWatchLocation,
+	convertCoords
 };
