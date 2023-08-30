@@ -2,11 +2,11 @@
 // programming for the Admin Utilities page (admin.html)
 
 import {
+	WS,
 	URL_ROOT,
 	EXPAND_X, EXPAND_Y,
 	pacmacro_reset,
 	getID,
-	connectWS,
 	watchLocation,
 	stopWatchLocation,
 	convertCoords

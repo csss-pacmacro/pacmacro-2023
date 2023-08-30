@@ -169,7 +169,7 @@ func (p *Players) ServeList(w http.ResponseWriter, r *http.Request) {
 
 	// get list of connected players
 	for ID, player := range p.players {
-		if player.Status != StatusGone {
+		if player.Status == StatusConn {
 			ret += player.Format(ID)
 		}
 	}

@@ -6,13 +6,22 @@ var URL_ROOT = "localhost:8080"; // must be root domain of server hosting API
 var EXPAND_X = 32;
 var EXPAND_Y = 32;
 
+/* GLOBALS
+ * window.pacmacro_set_ws  : Admin; setting map minimum and maximum latitude and longitude values
+ * window.pacmacro_ws      : websocket connection to API for lobby or PacMacro game
+ * window.pacmacro_geo     : geolocation value associated with current watch function
+ * window.pacmacro_ctx     : canvas API 2d context for drawing PacMacro game
+ * window.pacmacro_map     : PacMacro map information (JSON; /api/game/map.json)
+ */
+
 // reset pacmacro
 function pacmacro_reset() {
 	// undefine globals
 	window.pacmacro_set_ws = undefined;
-	window.pacmacro_ws = undefined;
-	window.pacmacro_geo = undefined;
-	window.pacmacro_ctx = undefined;
+	window.pacmacro_ws     = undefined;
+	window.pacmacro_geo    = undefined;
+	window.pacmacro_ctx    = undefined;
+	window.pacmacro_map    = undefined;
 }
 
 // save ID in cookies
@@ -36,17 +45,13 @@ function getID() {
 }
 
 // connect to websocket as player
-function connectWS(ID, func_recv) {
+function connectWS(ID, onopen, onclose, onerror, onmessage) {
 	// calling function should run connectWS in a try-catch block
 	window.pacmacro_ws = new WebSocket(`${WS}://${URL_ROOT}/api/ws/${ID}`);
-
-	if (window.pacmacro_ws === undefined)
-		return false;
-
-	// received API message
-	window.pacmacro_ws.addEventListener("message", func_recv);
-
-	return true;
+	window.pacmacro_ws.onopen = onopen;
+	window.pacmacro_ws.onclose = onclose;
+	window.pacmacro_ws.onerror = onerror;
+	window.pacmacro_ws.onmessage = onmessage;
 }
 
 // watch location of user; run update_func on each update
