@@ -223,7 +223,7 @@ func (p *Players) ServeRegister(w http.ResponseWriter, r *http.Request) {
 	} else if t == TypeLeader {
 		// register leader as a froshee watcher;
 		// remains invalid until admin changes type to leader.
-		ID = p.New(TypeFroshee, RepsWatcher, StatusDisc, pass)
+		ID = p.New(TypeFroshee, RepsNothing, StatusDisc, pass)
 	} else {
 		// register froshee into the game
 		ID = p.New(TypeFroshee, RepsNothing, StatusDisc, pass)

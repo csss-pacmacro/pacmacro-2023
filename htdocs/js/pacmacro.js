@@ -1,7 +1,8 @@
 // pacmacro.js
+// general programming for all pages
 
-// NOTE: change this in production
-var URL_ROOT = "localhost:8080";
+var WS       = "ws"; // change to "wss" in production
+var URL_ROOT = "localhost:8080"; // must be root domain of server hosting API
 var EXPAND_X = 32;
 var EXPAND_Y = 32;
 
@@ -12,6 +13,11 @@ function pacmacro_reset() {
 	window.pacmacro_ws = undefined;
 	window.pacmacro_geo = undefined;
 	window.pacmacro_ctx = undefined;
+}
+
+// save ID in cookies
+function saveID(ID) {
+	document.cookie = `id=${ID}`;
 }
 
 // get player ID from cookies
@@ -32,7 +38,7 @@ function getID() {
 // connect to websocket as player
 function connectWS(ID, func_recv) {
 	// calling function should run connectWS in a try-catch block
-	window.pacmacro_ws = new WebSocket(`ws://${URL_ROOT}/api/ws/${ID}`);
+	window.pacmacro_ws = new WebSocket(`${WS}://${URL_ROOT}/api/ws/${ID}`);
 
 	if (window.pacmacro_ws === undefined)
 		return false;
@@ -97,9 +103,11 @@ function convertCoords(map, lat, lon) {
 }
 
 export {
+	WS,
 	URL_ROOT,
 	EXPAND_X, EXPAND_Y,
 	pacmacro_reset,
+	saveID,
 	getID,
 	connectWS,
 	watchLocation,

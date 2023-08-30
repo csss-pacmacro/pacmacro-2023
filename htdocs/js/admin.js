@@ -1,4 +1,5 @@
 // admin.js
+// programming for the Admin Utilities page (admin.html)
 
 import {
 	URL_ROOT,
@@ -125,7 +126,7 @@ window.onload = async () => {
 		location_status.innerHTML = "Connecting...";
 
 		// try to open connection
-		window.pacmacro_set_ws = new WebSocket(`ws://${URL_ROOT}/api/admin/set/${admin_id.value}`);
+		window.pacmacro_set_ws = new WebSocket(`${WS}://${URL_ROOT}/api/admin/set/${admin_id.value}`);
 		window.pacmacro_set_ws.onopen = set_ws_open;
 		window.pacmacro_set_ws.onclose = set_ws_close;
 	}; // location_button.onclick
