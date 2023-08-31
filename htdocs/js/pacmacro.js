@@ -24,6 +24,7 @@ function pacmacro_reset() {
 	window.pacmacro_map    = undefined;
 }
 
+/* (going to try and store nothing in cookies)
 // save ID in cookies
 function saveID(ID) {
 	document.cookie = `id=${ID}`;
@@ -43,6 +44,7 @@ function getID() {
 
 	return ID;
 }
+*/
 
 // connect to websocket as player
 function connectWS(ID, onopen, onclose, onerror, onmessage) {
@@ -111,9 +113,9 @@ export {
 	WS,
 	URL_ROOT,
 	EXPAND_X, EXPAND_Y,
-	pacmacro_reset,
+	pacmacro_reset, /*
 	saveID,
-	getID,
+	getID, */
 	connectWS,
 	watchLocation,
 	stopWatchLocation,

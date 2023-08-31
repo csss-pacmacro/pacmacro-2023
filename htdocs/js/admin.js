@@ -6,7 +6,6 @@ import {
 	URL_ROOT,
 	EXPAND_X, EXPAND_Y,
 	pacmacro_reset,
-	getID,
 	watchLocation,
 	stopWatchLocation,
 	convertCoords
@@ -20,9 +19,11 @@ window.onload = async () => {
 	let admin_id   = document.getElementById("admin-id");
 	let admin_pass = document.getElementById("admin-pass");
 
+	/*
 	document.getElementById("load-id").onclick = () => {
 		admin_id.value = getID();
 	}
+	*/
 
 	/* REGISTRATION */
 

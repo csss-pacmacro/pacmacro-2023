@@ -6,6 +6,10 @@ body {
 	background-color: black;
 	color: white;
 }
+body.admin {
+	background-color: white;
+	color: black;
+}
 h1, h2, h3, p {
 	margin: 8px 0;
 }

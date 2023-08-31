@@ -67,9 +67,9 @@ type Player struct {
 	pass string // password
 
 	// public
-	Type   uint64 `json:"type"`
-	Reps   uint64 `json:"reps"` // represents
-	Status uint64 `json:"status"`
+	Type   uint64     `json:"type"`
+	Reps   uint64     `json:"reps"` // represents
+	Status uint64     `json:"status"`
 }
 
 // attempts to log in the user with the provided password

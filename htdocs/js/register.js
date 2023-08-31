@@ -1,7 +1,7 @@
 // register.js
 // programming for the Player Registration page (register.html)
 
-import { URL_ROOT, saveID } from "./pacmacro.js";
+import { URL_ROOT } from "./pacmacro.js";
 
 window.onload = () => {
 	let submit_button = document.getElementById("register-submit");
@@ -33,7 +33,7 @@ window.onload = () => {
 		}
 
 		ID = await ID.text();
-		saveID(ID); // save ID in cookies
-		window.location.href = "/"; // go to root
+		//saveID(ID); // save ID in cookies
+		window.location.href = `/?id=${ID}`; // go to index
 	};
 }

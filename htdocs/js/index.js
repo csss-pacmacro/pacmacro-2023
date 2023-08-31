@@ -3,18 +3,22 @@
 
 import {
 	pacmacro_reset,
-	getID,
-	connectWS
+	connectWS,
+	watchLocation
 } from "./pacmacro.js";
 
 window.onload = () => {
 	// reset globals
 	pacmacro_reset();
 
-	let pacmacro_canvas = document.getElementById("pacmacro-canvas");
 	let pacmacro_status = document.getElementById("pacmacro-status");
+	let pacmacro_canvas = document.getElementById("pacmacro-canvas");
+	let pass = ""; // received upon window.prompt(...)
 
 	let pacmacro_open = async () => {
+		// send password to authenticate player
+		window.pacmacro_ws.send(pass);
+
 		try {
 			let pacmacro_map = await fetch("/api/game/map.json");
 			window.pacmacro_map = await pacmacro_map.json();
@@ -29,6 +33,15 @@ window.onload = () => {
 		window.pacmacro_ctx = pacmacro_canvas.getContext("2d");
 		// set canvas size as per window.pacmacro_map
 
+		watchLocation((p) => {
+			let coordinate = {
+				"latitude": p.coords.latitude,
+				"longitude": p.coords.longitude
+			};
+
+			window.pacmacro_ws.send(JSON.stringify(coordinate));
+		});
+
 		pacmacro_status.innerHTML = "Good to go.";
 	};
 
@@ -41,9 +54,17 @@ window.onload = () => {
 		pacmacro_status.innerHTML = e.data;
 	};
 
-	connectWS(getID(),
-		pacmacro_open, // on open
-		pacmacro_redirect, // on close
-		pacmacro_redirect, // on error
-		pacmacro_recv); // on message
+	const params = new URLSearchParams(window.location.search);
+
+	if (!params.has("id"))
+		pacmacro_redirect();
+	else {
+		pass = window.prompt(`Please enter your password`, "");
+
+		connectWS(params.get("id"),
+			pacmacro_open, // on open
+			pacmacro_redirect, // on close
+			pacmacro_redirect, // on error
+			pacmacro_recv); // on message
+	}
 }
