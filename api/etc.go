@@ -14,6 +14,12 @@ const (
 	adminPassword = "1234" // NOTE: change in production
 )
 
+const (
+	CMD_UPDATE_SELF = "update-self" // on player type/reps update
+	CMD_MOVE        = "move"        // on player movement
+	CMD_INFORM      = "inform"      // inform another player change/connection
+)
+
 func min(a, b float64) float64 {
 	if a < b {
 		return a

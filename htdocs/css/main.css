@@ -32,6 +32,7 @@ input, select, button {
 	left: 50vw;
 	top: 50vh;
 	transform: translate(-50%, -50%);
-	width: fit-content;
+	width: 100vw;
+	max-width: 512px;
 	height: fit-content;
 }

@@ -5,14 +5,14 @@ import {
 	WS,
 	URL_ROOT,
 	EXPAND_X, EXPAND_Y,
-	pacmacro_reset,
+	pacmacro_init,
 	watchLocation,
 	stopWatchLocation,
 	convertCoords
 } from "./pacmacro.js";
 
 window.onload = async () => {
-	pacmacro_reset();
+	pacmacro_init();
 
 	/* ADMIN INFORMATION */
 

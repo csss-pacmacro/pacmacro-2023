@@ -2,7 +2,7 @@
 // general programming for all pages
 
 var WS       = "ws"; // change to "wss" in production
-var URL_ROOT = "localhost:8080"; // must be root domain of server hosting API
+var URL_ROOT = "192.168.1.87:8080"; // must be root domain of server hosting API
 var EXPAND_X = 32;
 var EXPAND_Y = 32;
 
@@ -14,17 +14,51 @@ var EXPAND_Y = 32;
  * window.pacmacro_map     : PacMacro map information (JSON; /api/game/map.json)
  */
 
-// reset pacmacro
-function pacmacro_reset() {
+function ribbons() {
+	document.body.innerHTML = `
+		<header>
+			<!-- thumbnails -->
+			<img onload="this.remove()" class="top-grid" src="static/flag_grid_t.png" alt="(grid)">
+			<img onload="this.remove()" class="bottom-grid" src="static/flag_grid_t.png" alt="(grid)">
+
+			<img class="top-grid" src="static/flag_grid.png" alt="">
+			<img class="bottom-grid" src="static/flag_grid.png" alt="">
+
+			<img class="pacmacro-logo" src="static/pacmacro.svg" alt="PacMacro">
+		</header>
+		<!--
+		<footer>
+			<img class="frosh-logo" src="static/frosh.png" alt="CSSS RETRO FROSH 2023">
+		</footer>
+		-->
+		${document.body.innerHTML}
+	`;
+}
+
+// init pacmacro
+function pacmacro_init() {
 	// undefine globals
 	window.pacmacro_set_ws = undefined;
 	window.pacmacro_ws     = undefined;
 	window.pacmacro_geo    = undefined;
 	window.pacmacro_ctx    = undefined;
 	window.pacmacro_map    = undefined;
+
+	window.pacmacro_players = {}; // prepare player map
+
+	// load images (for the canvas)
+	window.pacmacro_img_pacman          = new Image(96, 96);
+	window.pacmacro_img_pacman.src      = "static/game/pacman.png";
+	window.pacmacro_img_pacman_flag     = new Image(96, 96);
+	window.pacmacro_img_pacman_flag.src = "static/game/pacman_flag.png";
+	window.pacmacro_img_anti            = new Image(48, 48);
+	window.pacmacro_img_anti.src        = "static/game/anti.png";
+	window.pacmacro_img_ghost           = new Image(96, 96);
+	window.pacmacro_img_ghost.src       = "static/game/ghost.png";
+	window.pacmacro_img_edible          = new Image(96, 96);
+	window.pacmacro_img_edible.src      = "static/game/edible.png";
 }
 
-/* (going to try and store nothing in cookies)
 // save ID in cookies
 function saveID(ID) {
 	document.cookie = `id=${ID}`;
@@ -44,7 +78,6 @@ function getID() {
 
 	return ID;
 }
-*/
 
 // connect to websocket as player
 function connectWS(ID, onopen, onclose, onerror, onmessage) {
@@ -101,6 +134,10 @@ function convertCoords(map, lat, lon) {
 	let dlat = map.max.latitude - map.min.latitude;
 	let dlon = map.max.longitude - map.min.longitude;
 
+	// denominator cannot be zero
+	if (dlat == 0 || dlon == 0)
+		return plot;
+
 	plot.x = ((lon - map.min.longitude) / dlon) * map.width;
 	plot.y = ((lat - map.min.latitude) / dlat) * map.height;
 
@@ -109,15 +146,27 @@ function convertCoords(map, lat, lon) {
 	return plot;
 }
 
+function reps(n) {
+	switch (n) {
+	case 0:  return "Nothing";      break;
+	case 1:  return "Watcher";      break;
+	case 2:  return "Pacman";       break;
+	case 3:  return `Ghost ${n-2}`; break;
+	default: return "Error";        break;
+	}
+}
+
 export {
 	WS,
 	URL_ROOT,
 	EXPAND_X, EXPAND_Y,
-	pacmacro_reset, /*
+	ribbons,
+	pacmacro_init,
 	saveID,
-	getID, */
+	getID,
 	connectWS,
 	watchLocation,
 	stopWatchLocation,
-	convertCoords
+	convertCoords,
+	reps
 };

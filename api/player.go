@@ -16,6 +16,7 @@ const (
 	TypeLeader  = 1
 	TypeAdmin   = 2
 )
+
 func TypeString(t uint64) string {
 	switch t {
 	case TypeFroshee:
@@ -37,6 +38,7 @@ const (
 	RepsGhost   = 3 // 3... are ghosts
 	MaxGhost    = RepsGhost + 10 // permit max 10 ghosts
 )
+
 func RepsString(r uint64) string {
 	switch r {
 	case RepsNothing:
@@ -68,6 +70,7 @@ type Player struct {
 
 	// public
 	Type   uint64     `json:"type"`
+	Name   string     `json:"name"` // alt.: description
 	Reps   uint64     `json:"reps"` // represents
 	Status uint64     `json:"status"`
 }
@@ -78,7 +81,8 @@ func (p *Player) Login(pass string) bool {
 }
 
 func (p *Player) Format(ID string) string {
-	return fmt.Sprintf("{id:%q, type:%s, reps:%s}\n", ID, TypeString(p.Type), RepsString(p.Reps))
+	return fmt.Sprintf("{\"id\":%q, \"type\":%d, \"name\":%q, \"reps\":%d}\n",
+		ID, p.Type, p.Name, p.Reps)
 }
 
 type Players struct {
@@ -94,7 +98,7 @@ func (p *Players) Init() {
 	fmt.Print("Players handler initialized.\n")
 }
 
-func (p *Players) New(t uint64, reps uint64, status uint64, pass string) string {
+func (p *Players) New(t uint64, name string, reps uint64, status uint64, pass string) string {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -120,6 +124,7 @@ func (p *Players) New(t uint64, reps uint64, status uint64, pass string) string 
 	// no need to check if it was found; we just inserted it
 	player, _ := p.players[ID]
 	player.Type = t
+	player.Name = name
 	player.Reps = reps
 	player.Status = status
 	player.pass = pass
@@ -190,13 +195,11 @@ func (p *Players) ServeRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var (
-		t        int
-		pass, ID string
-	)
-
 	t, err := strconv.Atoi(r.FormValue("type"))
-	pass = r.FormValue("pass")
+	name := r.FormValue("name")
+	pass := r.FormValue("pass")
+
+	var ID string
 
 	if err != nil || // invalid form data
 		t < 0 || t > TypeAdmin || // validate type
@@ -219,14 +222,14 @@ func (p *Players) ServeRegister(w http.ResponseWriter, r *http.Request) {
 		// admin is registered successfully
 		p.adminRegistered = true
 
-		ID = p.New(TypeAdmin, RepsNothing, StatusDisc, pass)
+		ID = p.New(TypeAdmin, name, RepsNothing, StatusDisc, pass)
 	} else if t == TypeLeader {
 		// register leader as a froshee watcher;
 		// remains invalid until admin changes type to leader.
-		ID = p.New(TypeFroshee, RepsNothing, StatusDisc, pass)
+		ID = p.New(TypeFroshee, name, RepsNothing, StatusDisc, pass)
 	} else {
 		// register froshee into the game
-		ID = p.New(TypeFroshee, RepsNothing, StatusDisc, pass)
+		ID = p.New(TypeFroshee, name, RepsNothing, StatusDisc, pass)
 	}
 
 	player := p.Get(ID)
@@ -235,11 +238,10 @@ func (p *Players) ServeRegister(w http.ResponseWriter, r *http.Request) {
 			http.StatusText(http.StatusInternalServerError),
 			http.StatusInternalServerError)
 		return
-		
 	}
 
-	fmt.Printf("Players\tServeRegister (/api/player/register/):\tRegistered ID %q as %s representing %s.\n",
-		ID, TypeString(player.Type), RepsString(player.Reps))
+	fmt.Printf("Players\tServeRegister (/api/player/register/):\tRegistered ID %q (%q) as %s representing %s.\n",
+		ID, player.Name, TypeString(player.Type), RepsString(player.Reps))
 
 	// respond with registered ID
 	w.WriteHeader(http.StatusOK)

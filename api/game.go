@@ -23,6 +23,10 @@ type Game struct {
 func (g *Game) Init(players *Players) {
 	g.players = players
 
+	// arbitrary default values; for testing
+	g.Width = 32
+	g.Height = 32
+
 	fmt.Print("Game handler initialized.\n")
 }
 

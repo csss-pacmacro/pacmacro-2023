@@ -6,43 +6,32 @@
 		<title>Register | PacMacro</title>
 		<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 		<link rel="stylesheet" href="css/main.css">
-		<link rel="stylesheet" href="css/flag.css">
+		<link rel="stylesheet" href="css/ribbons.css">
 		<script type="module" src="js/register.js"></script>
 	</head>
 	<body>
-		<header class="flag">
-			<div class="background" style="background-image: url('static/flag_background.gif');"></div>
-
-			<!-- thumbnails; smaller (<32kB) versions of the larger graphics;
-			     these are removed once the entire document is loaded fully. -->
-			<img onload="this.remove()" class="top-grid" src="static/flag_grid_t.png" alt="">
-			<img onload="this.remove()" class="bottom-grid" src="static/flag_grid_t.png" alt="">
-			<img onload="this.remove()" class="frosh-logo" src="static/flag_frosh_t.png" alt="CSSS RETRO FROSH 2023">
-
-			<img class="top-grid" src="static/flag_grid.png" alt="">
-			<img class="bottom-grid" src="static/flag_grid.png" alt="">
-			<div class="logos">
-				<img class="frosh-logo" src="static/flag_frosh.png" alt="CSSS RETRO FROSH 2023">
-				<img class="pacmacro-logo" src="static/pacmacro.svg" alt="CSSS RETRO FROSH 2023">
+		<div class="center">
+			<div class="form">
+				<h1>Register</h1>
+				<p>Leaders: please register as Leader and send the Admin (Isabelle) your ID.</p>
+				<hr>
+				<label for="type">Registration Type</label>
+				<select id="register-type" name="type">
+					<option value="0">Froshee</option>
+					<option value="1">Leader</option>
+					<option value="2">Admin</option>
+				</select>
+				<br>
+				<label for="name">What's your name?</label>
+				<input id="register-name" name="name" type="text"></input>
+				<br>
+				<label for="pass">Choose a Password<label>
+				<input id="register-pass" name="pass" type="password"></input>
+				<br>
+				<button id="register-submit" type="submit">Submit</button>
+				<p>Already have an account? <a href="/login">Login</a></p>
+				<p id="register-status"></p>
 			</div>
-		</header>
-		<div class="form center">
-			<h1>Register</h1>
-			<p>Leaders: please register as Leader and send the Admin (Micah) your ID.</p>
-			<hr>
-			<label for="type">Registration Type</label>
-			<select id="register-type" name="type">
-				<option value="0">Froshee</option>
-				<option value="1">Leader</option>
-				<option value="2">Admin</option>
-			</select>
-			<br>
-			<label for="pass">Choose a Password<label>
-			<input id="register-pass" name="pass" type="password"></input>
-			<br>
-			<button id="register-submit" type="submit">Submit</button>
-			<p>Already have an account? <a href="/login">Login</a></p>
-			<p id="register-status"></p>
 		</div>
 	</body>
 </html>
