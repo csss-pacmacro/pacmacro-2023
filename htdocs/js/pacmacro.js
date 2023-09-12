@@ -2,7 +2,7 @@
 // general programming for all pages
 
 var WS       = "ws"; // change to "wss" in production
-var URL_ROOT = "192.168.1.87:8080"; // must be root domain of server hosting API
+var URL_ROOT = "localhost:8080"; // must be root domain of server hosting API
 var EXPAND_X = 32;
 var EXPAND_Y = 32;
 
@@ -51,8 +51,8 @@ function pacmacro_init() {
 	window.pacmacro_img_pacman.src      = "static/game/pacman.png";
 	window.pacmacro_img_pacman_flag     = new Image(96, 96);
 	window.pacmacro_img_pacman_flag.src = "static/game/pacman_flag.png";
-	window.pacmacro_img_anti            = new Image(48, 48);
-	window.pacmacro_img_anti.src        = "static/game/anti.png";
+	window.pacmacro_img_anti            = new Image(96, 96);
+	window.pacmacro_img_anti.src        = "static/game/anti_pacman.png";
 	window.pacmacro_img_ghost           = new Image(96, 96);
 	window.pacmacro_img_ghost.src       = "static/game/ghost.png";
 	window.pacmacro_img_edible          = new Image(96, 96);
@@ -146,13 +146,26 @@ function convertCoords(map, lat, lon) {
 	return plot;
 }
 
+let MAXGHOSTS = 10;
+var NREPS = 3 + MAXGHOSTS; // 3 is Ghost 1, 4 is Ghost 2, ...
+var NTYPE = 3;
+
 function reps(n) {
 	switch (n) {
 	case 0:  return "Nothing";      break;
-	case 1:  return "Watcher";      break;
-	case 2:  return "Pacman";       break;
-	case 3:  return `Ghost ${n-2}`; break;
-	default: return "Error";        break;
+	case 1:  return "Pacman";       break;
+	case 2:  return "Antipac";      break;
+	default: return `Ghost ${n-2}`; break;
+	}
+}
+
+function type(n) {
+	switch (n) {
+	case -1: return "Delete";  break;
+	case 0:  return "Froshee"; break;
+	case 1:  return "Leader";  break;
+	case 2:  return "Admin";   break;
+	default: return "Error";   break;
 	}
 }
 
@@ -168,5 +181,8 @@ export {
 	watchLocation,
 	stopWatchLocation,
 	convertCoords,
-	reps
+	NREPS,
+	NTYPE,
+	reps,
+	type
 };

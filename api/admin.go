@@ -13,16 +13,29 @@ import (
 
 type Admin struct {
 	// private
-	game    *Game
 	players *Players
+	game    *Game
+	sockets *Sockets
 	mutex   sync.Mutex
 }
 
-func (a *Admin) Init(game *Game, players *Players) {
-	a.game = game
+func (a *Admin) Init(players *Players, game *Game, sockets *Sockets) {
 	a.players = players
+	a.game = game
+	a.sockets = sockets
 
 	fmt.Print("Admin handler initialized.\n")
+}
+
+func (a *Admin) AuthorizePost(r *http.Request) bool {
+	if r.Method != "POST" {
+		return false
+	}
+
+	p    := a.players.Get(r.FormValue("id"))
+	pass := r.FormValue("pass")
+
+	return p != nil && p.Type == TypeAdmin && pass == adminPassword
 }
 
 // /api/admin/*
@@ -33,12 +46,11 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if path == "scale" {
 		a.ServeScale(w, r)
 	// POST /api/admin/populate
-	} else if path == "populate" {
-		a.ServePopulate(w, r)
-	// WS /api/admin/set/<ID>
-	} else if len(path) >= 4 && path[:4] == "set/" {
+	} else if len(path) >= 4 && path[:3] == "set" {
 		a.ServeSet(w, r)
-	// /api/admin/*
+	// POST /api/admin/update/<ID>
+	} else if len(path) >= 4 && path[:6] == "update" {
+		a.ServeUpdate(w, r)
 	} else {
 		http.Error(w,
 			http.StatusText(http.StatusNotFound),
@@ -52,18 +64,7 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // "width": horizontal scale of map
 // "height": vertical scale of map
 func (a *Admin) ServeScale(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w,
-			http.StatusText(http.StatusBadRequest),
-			http.StatusBadRequest)
-		return
-	}
-
-	ID := r.FormValue("id")
-	pass := r.FormValue("pass")
-
-	// authorize player as admin
-	if p := a.players.Get(ID); (p != nil && p.Type != TypeAdmin) || pass != adminPassword {
+	if !a.AuthorizePost(r) {
 		http.Error(w,
 			http.StatusText(http.StatusUnauthorized),
 			http.StatusUnauthorized)
@@ -76,7 +77,6 @@ func (a *Admin) ServeScale(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		h, err = strconv.Atoi(r.FormValue("height"))
 	}
-	pass = r.FormValue("pass")
 
 	// ensure that submitted form data is valid
 	if err != nil || wi < 0 || h < 0 {
@@ -86,66 +86,15 @@ func (a *Admin) ServeScale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.game.mutex.Lock()
 	a.game.Width = uint64(wi)
 	a.game.Height = uint64(h)
+	a.game.mutex.Unlock()
 
 	fmt.Printf("Admin\tServeScale (/api/admin/scale)\tChanged map scale; width: %d, height: %d.\n", wi, h)
 
 	// redirect as successful
 	http.Redirect(w, r, "/admin.html?status=ok", http.StatusFound)
-}
-
-// POST /api/admin/populate
-// "id": admin ID
-// "pass": admin password
-// "map": JSON array storing map information
-func (a *Admin) ServePopulate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w,
-			http.StatusText(http.StatusBadRequest),
-			http.StatusBadRequest)
-		return
-	}
-
-	ID := r.FormValue("id")
-	pass := r.FormValue("pass")
-
-	// authorize player as admin
-	if p := a.players.Get(ID); (p != nil && p.Type != TypeAdmin) || pass != adminPassword {
-		http.Error(w,
-			http.StatusText(http.StatusUnauthorized),
-			http.StatusUnauthorized)
-		return
-	}
-
-	var (
-		map_s string
-		// NOTE: json.Marshal interprets all JSON numbers as float64;
-		// thus, this preliminary map stores each value as a float64
-		m []float64
-	)
-
-	// parse JSON map
-	map_s = r.FormValue("map")
-	if err := json.Unmarshal([]byte(map_s), &m); err != nil {
-		fmt.Printf("Admin\tServePopulate (/api/admin/populate)\tFailure parsing map data: %v;\n" +
-			"----BEGIN MAP JSON\n%s\n----END MAP JSON\n", err, map_s)
-		http.Error(w,
-			http.StatusText(http.StatusBadRequest),
-			http.StatusBadRequest)
-		return
-	}
-
-	// create a new map
-	a.game.Map = make([]uint64, len(m))
-
-	// cast every float64 from m to a uint64 in a.game.Map
-	for i, f := range m {
-		a.game.Map[i] = uint64(f)
-	}
-
-	fmt.Printf("Admin\tServePopulate (/api/admin/populate)\tPopulated map;\n" +
-		"----BEGIN MAP DATA\n%+v\n----END MAP DATA\n", a.game.Map)
 }
 
 // WS /api/admin/set/<ID>
@@ -262,4 +211,57 @@ func (a *Admin) ServeSet(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("Admin\tServeSet (/api/admin/set/):\tReceived strange command: %q; ignoring.\n", parsed.Command)
 		}
 	}
+}
+
+// POST /api/admin/update/<ID>
+// id: admin ID
+// pass: admin pass
+// type: new type
+// reps: new reps
+func (a *Admin) ServeUpdate(w http.ResponseWriter, r *http.Request) {
+	if !a.AuthorizePost(r) {
+		http.Error(w,
+			http.StatusText(http.StatusUnauthorized),
+			http.StatusUnauthorized)
+		return
+	}
+
+	var (
+		p       *Player
+		t, reps int
+	)
+
+	target_ID := r.URL.Path[18:] // portion after /api/admin/set/
+	p = a.players.Get(target_ID)
+	if p == nil {
+		http.Error(w,
+			http.StatusText(http.StatusNotFound),
+			http.StatusNotFound)
+		return
+	}
+
+	t, err := strconv.Atoi(r.FormValue("type"))
+	if err == nil {
+		reps, err = strconv.Atoi(r.FormValue("reps"))
+	}
+
+	if err != nil {
+		http.Error(w,
+			http.StatusText(http.StatusBadRequest),
+			http.StatusBadRequest)
+		return
+	}
+
+	a.players.mutex.Lock()
+	p.Type = uint64(t)
+	p.Reps = uint64(reps)
+	a.players.mutex.Unlock()
+
+	// check if target is currently connected
+	if a.sockets.Find(target_ID) != nil {
+		// if yes, inform all connections of updated information
+		a.sockets.Inform(target_ID)
+	}
+
+	// OK
 }

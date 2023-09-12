@@ -1,226 +1,90 @@
 // admin.js
-// programming for the Admin Utilities page (admin.html)
+// for admin.html
 
 import {
-	WS,
-	URL_ROOT,
-	EXPAND_X, EXPAND_Y,
-	pacmacro_init,
-	watchLocation,
-	stopWatchLocation,
-	convertCoords
+	NTYPE, NREPS, type, reps
 } from "./pacmacro.js";
 
-window.onload = async () => {
-	pacmacro_init();
+window.onload = () => {
+	let stat = document.getElementById("status");
+	let load = document.getElementById("load");
+	let list = document.getElementById("list");
 
-	/* ADMIN INFORMATION */
+	load.onclick = async () => {
+		list.innerHTML = ""; // clear list
 
-	let admin_id   = document.getElementById("admin-id");
-	let admin_pass = document.getElementById("admin-pass");
-
-	/*
-	document.getElementById("load-id").onclick = () => {
-		admin_id.value = getID();
-	}
-	*/
-
-	/* REGISTRATION */
-
-	let register_button = document.getElementById("register-button");
-	let register_status = document.getElementById("register-status");
-
-	register_button.onclick = async () => {
-		const form = new FormData();
-
-		form.append("type", "2"); // TypeAdmin
-		form.append("pass", admin_pass.value);
-
-		let resp;
-
-		// attempt to register admin
+		let players;
 		try {
-			resp = await fetch("/api/player/register", {
-				method: "POST",
-				body: form
-			});
-		} catch {
-			// on fetch error
-			register_status.innerHTML = "Error";
-		}
-
-		if (resp.ok) {
-			let ID = await resp.text();
-
-			// store ID in cookie
-			document.cookie = `id=${ID}`;
-
-			register_status.innerHTML = ID;
-		} else
-			// on form error
-			register_status.innerHTML = `${resp.status}`;
-	};
-
-	/* LOCATION */
-
-	let lopen_button    = document.getElementById("location-open-button");
-	let lwrite_button   = document.getElementById("location-write-button");
-	let lclose_button   = document.getElementById("location-close-button");
-	let location_status = document.getElementById("location-status");
-
-	// on connection opened
-	let set_ws_open = () => {
-		location_status.innerHTML = "Connected.";
-
-		// on server message
-		window.pacmacro_set_ws.addEventListener("message", (e) => {
-			// show server message in status
-			location_status.innerHTML = e.data;
-		});
-
-		let log_in = {
-			"coordinate": {
-				"latitude": 0,
-				"longitude": 0
-			},
-			"command": "password",
-			"data": admin_pass.value
-		}
-
-		// send log-in information
-		window.pacmacro_set_ws.send(JSON.stringify(log_in));
-
-		// watch location and pass it along to the server
-		watchLocation((p) => {
-			let msg = {
-				"coordinate": {
-					"latitude": p.coords.latitude,
-					"longitude": p.coords.longitude
-				},
-				"command": "location",
-				"data": ""
+			players = await fetch("/api/player/list.json");
+			if (!players.ok) {
+				throw "Response not OK.";
 			}
 
-			window.pacmacro_set_ws.send(JSON.stringify(msg));
-		});
-	} // set_ws_open
-
-	// on connection closed
-	let set_ws_close = () => {
-		location_status.innerHTML = "Closed.";
-
-		// stop watching location
-		stopWatchLocation();
-
-		if (window.pacmacro_set_ws !== undefined) {
-			// close connection ourselves (on lclose_button.onclick())
-			window.pacmacro_set_ws.close();
-			window.pacmacro_set_ws = undefined;
-		}
-	} // set_ws_close
-
-	// on prompt to start map setting
-	lopen_button.onclick = () => {
-		if (window.pacmacro_set_ws !== undefined)
-			return; // websocket is already opened
-
-		location_status.innerHTML = "Connecting...";
-
-		// try to open connection
-		window.pacmacro_set_ws = new WebSocket(`${WS}://${URL_ROOT}/api/admin/set/${admin_id.value}`);
-		window.pacmacro_set_ws.onopen = set_ws_open;
-		window.pacmacro_set_ws.onclose = set_ws_close;
-	}; // location_button.onclick
-
-	// on prompt to write collected location data to server
-	lwrite_button.onclick = () => {
-		if (window.pacmacro_set_ws === undefined)
-			return; // there isn't an open connection
-
-		let msg = {
-			"coordinate": {
-				"latitude": 0,
-				"longitude": 0
-			},
-			"command": "write",
-			"data": ""
-		};
-
-		// send command to write data
-		window.pacmacro_set_ws.send(JSON.stringify(msg));
-	}; // lwrite_button.onclick
-
-	lclose_button.onclick = set_ws_close;
-
-	/* POPULATE */
-
-	let pgenerate_button = document.getElementById("populate-generate-button");
-	let pdrawpath_button = document.getElementById("populate-draw-path-button");
-	let pstopdraw_button = document.getElementById("populate-stop-draw-button");
-	let psubmit_button   = document.getElementById("populate-submit-button");
-	let populate_status  = document.getElementById("populate-status");
-	let pacmacro_map     = document.getElementById("pacmacro-map");
-
-	// generate table for filling map data
-	pgenerate_button.onclick = async () => {
-		try {
-			window.pacmacro_map = await fetch("/api/game/map.json");
+			players = await players.json();
 		} catch {
-			populate_status.innerHTML = "Error";
+			list.innerHTML = `
+				<p>There was a problem contacting the API.</p>
+			`;
+			return;
 		}
+		// players is a list of all online players
 
-		window.pacmacro_map = await window.pacmacro_map.json();
-		console.log(window.pacmacro_map);
+		for (let i = 0; i < players.length; i++) {
+			const p = players[i];
 
-		window.pacmacro_ctx = pacmacro_map.getContext("2d");
-		let ctx = window.pacmacro_ctx;
-
-		ctx.canvas.width = window.pacmacro_map.width * EXPAND_X;
-		ctx.canvas.height = window.pacmacro_map.height * EXPAND_Y;
-		ctx.fillStyle = "silver";
-		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-		let start_tile = 0, tile = 0;
-		let n = window.pacmacro_map.width * window.pacmacro_map.height;
-
-		// fill map with grid
-		for (let i = 0; i < n; i++) {
-			let x = i % window.pacmacro_map.width;
-			let y = Math.floor(i / window.pacmacro_map.width);
-
-			tile = tile == 1 ? 0 : 1;
-
-			if (x == 0) {
-				tile = start_tile;
-				start_tile = start_tile == 1 ? 0 : 1;
+			let types = "";
+			// NOTE: -1 is Delete
+			for (let i = -1; i < NTYPE; i++) {
+				types += `<option value=${i}
+					${p.type == i ? "selected" : ""}>
+					${type(i)}
+				</option>`;
 			}
 
-			let rendx = x * EXPAND_X;
-			let rendy = y * EXPAND_Y;
+			let reps_ = "";
+			for (let i = 0; i < NREPS; i++) {
+				reps_ += `<option value=${i}
+					${p.reps == i ? "selected" : ""}>
+					${reps(i)}
+				</option>`;
+			}
 
-			ctx.fillStyle = tile == 1 ? "gray" : "silver";
-			ctx.fillRect(rendx, rendy, rendx + EXPAND_X, rendy + EXPAND_Y);
+			list.innerHTML += `<div class="player">
+				<h1>${p.name} (${p.id})</h1>
+				<select id="type${i}">${types}</select>
+				<select id="reps${i}">${reps_}</select>
+				<button id="submit${i}">Submit</button>
+			</div>`;
+			document.getElementById(`submit${i}`).onclick = eval(`
+				async () => {
+					let id    = document.getElementById("id");
+					let pass  = document.getElementById("pass");
+					let stat  = document.getElementById("status");
+					let _type = document.getElementById("type${i}");
+					let _reps = document.getElementById("reps${i}");
+
+					let form = new FormData();
+
+					form.append("id",   id.value);
+					form.append("pass", pass.value);
+					form.append("type", _type.value);
+					form.append("reps", _reps.value);
+
+					try {
+						let resp = await fetch("/api/admin/update/${p.id}", {
+							method: "POST",
+							body: form
+						});
+						if (!resp.ok) {
+							stat.innerHTML = "Response not OK.";
+						} else {
+							stat.innerHTML = "Success.";
+						}
+					} catch {
+						stat.innerHTML = "Error: couldn't contact API.";
+					}
+				}
+			`);
 		}
 	};
-
-	pdrawpath_button.onclick = () => {
-		watchLocation((p) => {
-			let plot = convertCoords(window.pacmacro_map, p.coords.latitude, p.coords.longitude);
-
-			let ctx = window.pacmacro_ctx;
-			let rendx = plot.x * EXPAND_X;
-			let rendy = plot.y * EXPAND_Y;
-
-			ctx.fillStyle = "black";
-			ctx.fillRect(rendx, rendy, rendx+1, rendy+1);
-		});
-	};
-
-	pstopdraw_button.onclick = () => {
-		stopWatchLocation();
-	}
-
-	psubmit_button.onclick = async () => {
-		// do nothing
-	};
-};
+}

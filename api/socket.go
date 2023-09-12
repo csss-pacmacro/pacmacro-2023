@@ -29,6 +29,96 @@ func (s *Sockets) Init(players *Players) {
 	fmt.Print("Sockets handler initialized.\n")
 }
 
+func (s *Sockets) Find(id string) *Conn {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	for _, conn := range s.conn {
+		if conn == nil {
+			continue
+		}
+
+		if conn.id == id {
+			return conn
+		}
+	}
+
+	return nil
+}
+
+func (s *Sockets) Inform(id string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	p := s.players.Get(id)
+	if p == nil {
+		return // player doesn't exist
+	}
+
+	var msg Message
+	for _, conn := range s.conn {
+		// was disconnected
+		if conn == nil {
+			continue
+		}
+
+		if conn.id == id {
+			msg.Coord = conn.coord
+		}
+	}
+	msg.Command = CMD_INFORM
+	msg.Data = p.Format(id)
+
+	msg_json, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+
+	// for every connection
+	for _, conn := range s.conn {
+		if conn == nil {
+			continue
+		}
+
+		// inform
+		conn.c.WriteMessage(ws.TextMessage, msg_json)
+	}
+}
+
+func (s *Sockets) Informs() []string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var ret []string
+
+	for _, conn := range s.conn {
+		// disconnected
+		if conn == nil {
+			continue
+		}
+
+		p := s.players.Get(conn.id)
+		// invalid connection
+		if p == nil {
+			continue
+		}
+
+		var msg Message
+		msg.Coord = conn.coord
+		msg.Command = CMD_INFORM
+		msg.Data = p.Format(conn.id)
+
+		msg_json, err := json.Marshal(msg)
+		if err != nil {
+			continue
+		}
+
+		ret = append(ret, string(msg_json))
+	}
+
+	return ret
+}
+
 // move a player; notify connections
 func (s *Sockets) Move(conn_i int, coord Coordinate) {
 	s.mutex.Lock()
@@ -69,39 +159,22 @@ func (s *Sockets) Connect(c *ws.Conn, id string) int {
 	}
 
 	var conn *Conn
-
 	conn = new(Conn)
 	conn.c = c
 	conn.id = id
-
-	var msg Message
-	msg.Command = CMD_INFORM
-	msg.Data = p.Format(id)
-
-	msg_json, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Print("Err 2\n")
-		return -1
-	}
-
-	conn_i := 0
-	found := false
+	conn_i := -1
 
 	// iterate over active connections
 	for i, _ := range s.conn {
-		// inform existing connections of this new connection
-		if s.conn[i] != nil {
-			s.conn[i].c.WriteMessage(ws.TextMessage, msg_json)
-		// empty place
-		} else if !found {
+		if s.conn[i] == nil {
 			s.conn[i] = conn
 			conn_i = i
-			found = true
+			break
 		}
 	}
 
 	// if there are no empty spaces; append
-	if !found {
+	if conn_i == -1 {
 		conn_i = len(s.conn)
 		s.conn = append(s.conn, conn)
 	}
@@ -120,13 +193,10 @@ func (s *Sockets) Disconnect(conn_i int) {
 func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ID := r.URL.Path[8:]
 	player := s.players.Get(ID)
-
 	if player == nil {
 		http.Error(w,
 			http.StatusText(http.StatusBadRequest),
 			http.StatusBadRequest)
-		// print error
-		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tBad Request; ID %q not registered.\n", ID)
 		return
 	}
 
@@ -136,67 +206,34 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w,
 			http.StatusText(http.StatusBadRequest),
 			http.StatusBadRequest)
-		// print error
-		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tBad connection: %v.\n", err)
 		return
 	}
+	defer conn.Close()
 
 	// attempt to log in
 	msgType, msg, err := conn.ReadMessage()
 	if err != nil || msgType != ws.TextMessage || !player.Login(string(msg)) {
-		conn.Close()
+		//fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Bad password.\n", ID)
 		return
 	}
 
+	// add connection
 	conn_i := s.Connect(conn, ID)
 	if conn_i == -1 {
 		return // error
 	}
-
 	defer s.Disconnect(conn_i)
 
 	fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Connection opened.\n", ID)
 
-	// let player know all about themselv
-	var msg_upd Message
-	msg_upd.Command = CMD_UPDATE_SELF
-	msg_upd.Data = player.Format(ID)
-	msg_upd_json, err := json.Marshal(msg_upd)
-	if err != nil {
-		return // close connection; failure
-	}
-	err = conn.WriteMessage(ws.TextMessage, msg_upd_json)
-	if err != nil {
-		return // couldn't write message; failure
+	// inform new connection of existing connections
+	informs := s.Informs()
+	for _, msg := range informs {
+		conn.WriteMessage(ws.TextMessage, []byte(msg))
 	}
 
-	s.mutex.Lock()
-
-	for i, _ := range s.conn {
-		if s.conn[i] == nil {
-			continue
-		}
-
-		p := s.players.Get(s.conn[i].id)
-		if p == nil {
-			continue
-		}
-
-		var msg Message
-		msg.Coord = s.conn[i].coord
-		msg.Command = CMD_INFORM
-		msg.Data = p.Format(s.conn[i].id)
-
-		msg_json, err := json.Marshal(msg)
-		if err != nil {
-			fmt.Print("Err 1\n")
-			continue
-		}
-
-		conn.WriteMessage(ws.TextMessage, msg_json)
-	}
-
-	s.mutex.Unlock()
+	// let existing connections know about this player
+	s.Inform(ID)
 
 	s.players.SetStatus(ID, StatusConn)
 	defer s.players.SetStatus(ID, StatusDisc)
@@ -219,19 +256,11 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// print received message
-		fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Received message: %v.\n", ID, string(msg))
-
-		// TODO: keep track of client's positions through messages
-
 		var coord Coordinate
-
 		if err := json.Unmarshal(msg, &coord); err != nil {
-			fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Received invalid message: %s.\n", ID, string(msg))
 			continue
 		}
 
-		// notify other connections of movement
 		s.Move(conn_i, coord)
 	}
 }

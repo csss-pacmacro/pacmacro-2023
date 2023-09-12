@@ -36,3 +36,23 @@ input, select, button {
 	max-width: 512px;
 	height: fit-content;
 }
+div.list {
+	padding: 32px;
+}
+div.player {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	justify-content: flex-start;
+	justify-items: flex-start;
+	align-content: center;
+	align-items: center;
+	width: 100%;
+	height: 48px;
+	border-bottom: 1px solid #f0f0f0;
+}
+div.player h1 {
+	margin: 0 8px;
+	font-size: 12pt;
+	font-weight: 400;
+}

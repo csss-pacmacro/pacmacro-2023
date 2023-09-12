@@ -5,19 +5,20 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"encoding/json"
 )
 
 type Game struct {
 	// private
 	players *Players
+	mutex   sync.Mutex
 
 	// public
 	Min    Coordinate `json:"min"`
 	Max    Coordinate `json:"max"`
 	Width  uint64     `json:"width"`
 	Height uint64     `json:"height"`
-	Map    []uint64   `json:"map"`
 }
 
 func (g *Game) Init(players *Players) {

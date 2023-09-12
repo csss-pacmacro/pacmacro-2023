@@ -10,59 +10,6 @@ import (
 	"strconv"
 )
 
-// user type
-const (
-	TypeFroshee = 0 // zero-value; froshee
-	TypeLeader  = 1
-	TypeAdmin   = 2
-)
-
-func TypeString(t uint64) string {
-	switch t {
-	case TypeFroshee:
-		return "Froshee"
-	case TypeLeader:
-		return "Leader"
-	case TypeAdmin:
-		return "Admin"
-	default:
-		return "Error"
-	}
-}
-
-// player represents
-const (
-	RepsNothing = 0 // zero-value; not playing
-	RepsWatcher = 1 // leaders should be this
-	RepsPacman  = 2
-	RepsGhost   = 3 // 3... are ghosts
-	MaxGhost    = RepsGhost + 10 // permit max 10 ghosts
-)
-
-func RepsString(r uint64) string {
-	switch r {
-	case RepsNothing:
-		return "Nothing"
-	case RepsWatcher:
-		return "Watcher"
-	case RepsPacman:
-		return "Pacman"
-	default:
-		return fmt.Sprintf("Ghost %d", r - RepsGhost + 1)
-	}
-}
-
-const (
-	// user status
-	StatusGone = 0 // zero-value; out-of-game
-	StatusDisc = 1 // user is disconnected; await re-connection
-	StatusConn = 2 // user is connected
-
-	id_length  = 4 // length of a session ID
-)
-// ID letters are hexadecimal characters
-var id_letters = []rune("0123456789ABCDEF")
-
 // zero-value player: froshee, pacman, disconnected
 type Player struct {
 	// private
@@ -133,16 +80,25 @@ func (p *Players) New(t uint64, name string, reps uint64, status uint64, pass st
 }
 
 func (p *Players) Delete(ID string) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	delete(p.players, ID)
 }
 
 func (p *Players) SetStatus(ID string, status uint64) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if player, found := p.players[ID]; found {
 		player.Status = status
 	}
 }
 
 func (p *Players) Get(ID string) *Player {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if player, found := p.players[ID]; found {
 		return player
 	} else {
@@ -170,12 +126,17 @@ func (p *Players) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/player/list.json
 func (p *Players) ServeList(w http.ResponseWriter, r *http.Request) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	ret := "[\n"
+	i := 0
 
 	// get list of connected players
 	for ID, player := range p.players {
-		if player.Status == StatusConn {
-			ret += player.Format(ID)
+		ret += player.Format(ID)
+		if i++; i < len(p.players) {
+			ret += ","
 		}
 	}
 

@@ -38,8 +38,8 @@ func main() {
 
 	players.Init() // initialize players handler
 	game.Init(&players) // initialize game handler
-	admin.Init(&game, &players) // initialize admin handler
 	sock.Init(&players) // initialize sockets handler
+	admin.Init(&players, &game, &sock) // initialize admin handler
 
 	http.Handle("/api/player/", &players) // /api/player/register; /api/player/list.json
 	http.Handle("/api/admin/", &admin) // /api/admin/set/<ID>; /api/admin/scale; /api/admin/populate

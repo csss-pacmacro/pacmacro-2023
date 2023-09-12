@@ -8,6 +8,7 @@ import {
 	connectWS,
 	watchLocation,
 	convertCoords,
+	NREPS,
 	reps,
 } from "./pacmacro.js";
 
@@ -16,10 +17,10 @@ window.onload = async () => {
 	// reset globals
 	pacmacro_init();
 
+	let self_summary = document.getElementById("self-summary");
 	let pacmacro_status = document.getElementById("pacmacro-status");
 	let pacmacro_canvas = document.getElementById("pacmacro-canvas");
 	let pass = ""; // received upon window.prompt(...)
-	let self_summary = document.getElementById("self-summary");
 
 	try {
 		let pacmacro_map = await fetch("/api/game/map.json");
@@ -37,6 +38,8 @@ window.onload = async () => {
 	window.pacmacro_ctx.font = "16pt sans-serif";
 
 	let pacmacro_draw = () => {
+		console.log("draw");
+
 		if (window.pacmacro_ctx === undefined)
 			return;
 
@@ -48,32 +51,44 @@ window.onload = async () => {
 
 		// render each player
 		Object.keys(window.pacmacro_players).forEach((ID,i) => {
+			console.log("---- DRAWING ----");
+
 			const p = window.pacmacro_players[ID];
 			let img, text;
 
+			console.log(p);
+
 			switch (p.player.reps) {
-			case 2: // pacman
+			case 1: // pacman
 				img = window.pacmacro_img_pacman;
 				break;
-			case 3: // ghost
-				img = window.pacmacro_img_ghost;
+			case 2: // antipac
+				img = window.pacmacro_img_anti;
 				break;
 			default: // nothing; watcher; error
-				return; // do not render image
+				const ghost = p.player.reps;
+
+				// check if reps is valid ghost
+				if (ghost - 3 < 0 || ghost >= NREPS)
+					return;
+
+				img = window.pacmacro_img_ghost; // NOTE: get which ghost
 			}
 
 			window.pacmacro_ctx.drawImage(img,
 				p.plot.x * EXPAND_X - 48,
-				p.plot.y * EXPAND_Y - 96,
+				p.plot.y * EXPAND_Y - 88,
 				96, 96);
 			window.pacmacro_ctx.textAlign = "center";
 			window.pacmacro_ctx.fillStyle = "#ffffff";
 
-			if (ID == getID()) {
+			if (ID == window.pacmacro_ID) {
 				text = `${p.player.name} (You)`;
 			} else {
 				text = `${p.player.name} (${ID})`;
 			}
+
+			console.log(p.plot);
 
 			window.pacmacro_ctx.fillText(text,
 				p.plot.x * EXPAND_X,
@@ -103,41 +118,41 @@ window.onload = async () => {
 
 	let pacmacro_recv = (e) => {
 		let msg = JSON.parse(e.data);
-		console.log(msg.command);
+		console.log(`COMMAND: ${msg.command}`);
+		console.log(`DATA: ${msg.data}`);
 
 		if (msg.command === undefined)
 			return; // invalid message
 
-		if (msg.command == "update-self") {
-			window.pacmacro_self = JSON.parse(msg.data);
-			self_summary.innerHTML =
-				`${window.pacmacro_self.name} is ${reps(window.pacmacro_self.reps)}.`;
-		} else
 		if (msg.command == "inform") {
 			let plot = convertCoords(window.pacmacro_map,
 				msg.coordinate.latitude, msg.coordinate.longitude);
-			const player = JSON.parse(msg.data);
-			console.log(player);
+			const p = JSON.parse(msg.data);
 
-			if (player.id === undefined)
+			if (p.id === undefined)
 				return; // invalid
 
 			// set player
-			window.pacmacro_players[player.id] = {
+			window.pacmacro_players[p.id] = {
 				"plot": plot,
-				"player": player
+				"player": p
 			};
+
+			if (p.id == window.pacmacro_ID) {
+				self_summary.innerHTML =
+					`${p.name} (${p.id}) is ${reps(p.reps)}`;
+			}
 		} else
 		if (msg.command == "move") {
-			let plot = convertCoords(window.pacmacro_map,
-				msg.coordinate.latitude, msg.coordinate.longitude);
-			const p = window.pacmacro_players[msg.data];
+			console.log("moving");
+			const p = window.pacmacro_players[msg.data]; // data is ID
 
 			if (p === undefined)
 				return; // invalid
 
 			// update plot
-			p.plot = plot;
+			p.plot = convertCoords(window.pacmacro_map,
+				msg.coordinate.latitude, msg.coordinate.longitude);
 		}
 
 		// write server message to status element
@@ -151,6 +166,7 @@ window.onload = async () => {
 		pacmacro_redirect();
 	else {
 		let ID = params.get("id");
+		window.pacmacro_ID = ID;
 		pass = window.prompt(`Please enter ${ID}'s password`, "");
 
 		connectWS(ID,
