@@ -9,6 +9,7 @@ body {
 body.admin {
 	background-color: white;
 	color: black;
+	padding: 16px;
 }
 h1, h2, h3, p {
 	margin: 8px 0;
@@ -19,6 +20,7 @@ input, select, button {
 	border: 1px solid #a0a0a0;
 	padding: 4px;
 	background-color: white;
+	color: black;
 }
 .form {
 	border: 1px solid #808080;
@@ -49,7 +51,10 @@ div.player {
 	align-items: center;
 	width: 100%;
 	height: 48px;
-	border-bottom: 1px solid #f0f0f0;
+	border-bottom: 1px solid #d0d0d0;
+}
+div.player.hidden {
+	opacity: 0.25;
 }
 div.player h1 {
 	margin: 0 8px;

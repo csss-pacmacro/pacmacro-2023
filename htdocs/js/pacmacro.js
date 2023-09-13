@@ -146,25 +146,26 @@ function convertCoords(map, lat, lon) {
 	return plot;
 }
 
-let MAXGHOSTS = 10;
-var NREPS = 3 + MAXGHOSTS; // 3 is Ghost 1, 4 is Ghost 2, ...
-var NTYPE = 3;
+var NREPS = 5;
+var NTYPE = 4;
 
 function reps(n) {
 	switch (n) {
-	case 0:  return "Nothing";      break;
-	case 1:  return "Pacman";       break;
-	case 2:  return "Antipac";      break;
-	default: return `Ghost ${n-2}`; break;
+	case 0:  return "Nothing"; break;
+	case 1:  return "Pacman";  break;
+	case 2:  return "Antipac"; break;
+	case 3:  return "Ghost";   break;
+	case 4:  return "Edible";  break;
+	default: return "Error";   break;
 	}
 }
 
 function type(n) {
 	switch (n) {
-	case -1: return "Delete";  break;
 	case 0:  return "Froshee"; break;
 	case 1:  return "Leader";  break;
 	case 2:  return "Admin";   break;
+	case 3:  return "Hidden";  break;
 	default: return "Error";   break;
 	}
 }

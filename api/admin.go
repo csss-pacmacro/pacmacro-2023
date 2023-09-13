@@ -45,9 +45,12 @@ func (a *Admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// POST /api/admin/scale
 	if path == "scale" {
 		a.ServeScale(w, r)
-	// POST /api/admin/populate
+	// WS /api/admin/set
 	} else if len(path) >= 4 && path[:3] == "set" {
 		a.ServeSet(w, r)
+	// POST /api/admin/bounds
+	} else if len(path) >= 4 && path == "bounds" {
+		a.ServeBounds(w, r)
 	// POST /api/admin/update/<ID>
 	} else if len(path) >= 4 && path[:6] == "update" {
 		a.ServeUpdate(w, r)
@@ -92,9 +95,42 @@ func (a *Admin) ServeScale(w http.ResponseWriter, r *http.Request) {
 	a.game.mutex.Unlock()
 
 	fmt.Printf("Admin\tServeScale (/api/admin/scale)\tChanged map scale; width: %d, height: %d.\n", wi, h)
+}
 
-	// redirect as successful
-	http.Redirect(w, r, "/admin.html?status=ok", http.StatusFound)
+// POST /api/admin/bounds
+// "id": admin ID
+// "pass": admin password
+// "min": JSON object storing minimum coordinate information
+// "max": JSON object storing maximum coordinate information
+func (a *Admin) ServeBounds(w http.ResponseWriter, r *http.Request) {
+	if !a.AuthorizePost(r) {
+		http.Error(w,
+			http.StatusText(http.StatusUnauthorized),
+			http.StatusUnauthorized)
+		return
+	}
+
+	var (
+		_min, _max Coordinate
+		err      error
+	)
+
+	if err = json.Unmarshal([]byte(r.FormValue("min")), &_min); err == nil {
+		err = json.Unmarshal([]byte(r.FormValue("max")), &_max)
+	}
+	if err != nil {
+		http.Error(w,
+			http.StatusText(http.StatusBadRequest),
+			http.StatusBadRequest)
+		return
+	}
+
+	a.game.mutex.Lock()
+	a.game.Min = _min
+	a.game.Max = _max
+	a.game.mutex.Unlock()
+
+	fmt.Printf("Admin\tServeBounds (/api/admin/bounds)\tChanged map bounds; min: %+v, max: %+v.\n", _min, _max)
 }
 
 // WS /api/admin/set/<ID>
@@ -244,7 +280,6 @@ func (a *Admin) ServeUpdate(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		reps, err = strconv.Atoi(r.FormValue("reps"))
 	}
-
 	if err != nil {
 		http.Error(w,
 			http.StatusText(http.StatusBadRequest),

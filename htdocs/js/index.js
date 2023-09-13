@@ -54,6 +54,8 @@ window.onload = async () => {
 			console.log("---- DRAWING ----");
 
 			const p = window.pacmacro_players[ID];
+			if (p.player.type == 3) // TypeHidden
+				continue;
 			let img, text;
 
 			console.log(p);

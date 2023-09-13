@@ -10,6 +10,95 @@ window.onload = () => {
 	let load = document.getElementById("load");
 	let list = document.getElementById("list");
 
+	stat.innerHTML = "--"; // no status
+
+	document.getElementById("all_edible").onclick = async () => {
+		let players;
+		try {
+			players = await fetch("/api/player/list.json");
+			if (!players.ok) {
+				throw "Response not OK.";
+			}
+
+			players = await players.json();
+		} catch {
+			list.innerHTML = `
+				<p>There was a problem contacting the API.</p>
+			`;
+			return;
+		}
+
+		let id   = document.getElementById("id");
+		let pass = document.getElementById("pass");
+
+		for (const p of players) {
+			if (p.reps != 3 || p.type == 2)
+				continue
+
+			let form = new FormData();
+
+			form.append("id", id.value);
+			form.append("pass", pass.value);
+			form.append("type", p.type);
+			form.append("reps", 4); // 4 is RepsEdible
+
+			try {
+				let resp = await fetch(`/api/admin/update/${p.id}`, {
+					method: "POST",
+					body: form
+				});
+				if (resp.ok) {
+					stat.innerHTML = `Success ${p.id}`;
+				}
+			} catch {}
+		}
+		list.innerHTML = "Please load players again.";
+	};
+
+	document.getElementById("all_nothing").onclick = async () => {
+		let players;
+		try {
+			players = await fetch("/api/player/list.json");
+			if (!players.ok) {
+				throw "Response not OK.";
+			}
+
+			players = await players.json();
+		} catch {
+			list.innerHTML = `
+				<p>There was a problem contacting the API.</p>
+			`;
+			return;
+		}
+
+		let id   = document.getElementById("id");
+		let pass = document.getElementById("pass");
+
+		for (const p of players) {
+			// don't change admin
+			if (p.type == 2)
+				continue
+
+			let form = new FormData();
+
+			form.append("id", id.value);
+			form.append("pass", pass.value);
+			form.append("type", p.type);
+			form.append("reps", 0); // 0 is RepsNothing
+
+			try {
+				let resp = await fetch(`/api/admin/update/${p.id}`, {
+					method: "POST",
+					body: form
+				});
+				if (resp.ok) {
+					stat.innerHTML = `Success ${p.id}`;
+				}
+			} catch {}
+		}
+		list.innerHTML = "Please load players again.";
+	};
+
 	load.onclick = async () => {
 		list.innerHTML = ""; // clear list
 
@@ -33,29 +122,35 @@ window.onload = () => {
 			const p = players[i];
 
 			let types = "";
-			// NOTE: -1 is Delete
-			for (let i = -1; i < NTYPE; i++) {
-				types += `<option value=${i}
-					${p.type == i ? "selected" : ""}>
-					${type(i)}
+			for (let j = 0; j < NTYPE; j++) {
+				types += `<option value=${j}
+					${p.type == j ? "selected" : ""}>
+					${type(j)}
 				</option>`;
 			}
 
 			let reps_ = "";
-			for (let i = 0; i < NREPS; i++) {
-				reps_ += `<option value=${i}
-					${p.reps == i ? "selected" : ""}>
-					${reps(i)}
+			for (let j = 0; j < NREPS; j++) {
+				reps_ += `<option value=${j}
+					${p.reps == j ? "selected" : ""}>
+					${reps(j)}
 				</option>`;
 			}
 
-			list.innerHTML += `<div class="player">
+			let player = document.createElement("div");
+			player.classList.add("player");
+
+			if (p.type == 3) // TypeHidden
+				player.classList.add("hidden");
+
+			player.innerHTML = `
 				<h1>${p.name} (${p.id})</h1>
 				<select id="type${i}">${types}</select>
 				<select id="reps${i}">${reps_}</select>
-				<button id="submit${i}">Submit</button>
-			</div>`;
-			document.getElementById(`submit${i}`).onclick = eval(`
+			`;
+
+			let submit = document.createElement("button");
+			submit.onclick = eval(`
 				async () => {
 					let id    = document.getElementById("id");
 					let pass  = document.getElementById("pass");
@@ -79,12 +174,19 @@ window.onload = () => {
 							stat.innerHTML = "Response not OK.";
 						} else {
 							stat.innerHTML = "Success.";
+							setTimeout(() => {
+								stat.innerHTML = "--";
+							}, 2000); // after two seconds, update status
 						}
 					} catch {
 						stat.innerHTML = "Error: couldn't contact API.";
 					}
 				}
 			`);
+			submit.innerHTML = `Update ${p.id}`;
+
+			player.appendChild(submit);
+			list.appendChild(player);
 		}
 	};
 }

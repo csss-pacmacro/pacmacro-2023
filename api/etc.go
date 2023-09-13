@@ -4,7 +4,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	ws "github.com/gorilla/websocket"
 )
@@ -20,17 +19,17 @@ const (
 	CMD_INFORM      = "inform"      // inform another player change/connection
 
 	// user type
-	TypeDelete  = -1 // for /api/admin/update/<ID>
 	TypeFroshee = 0 // zero-value; froshee
 	TypeLeader  = 1
 	TypeAdmin   = 2
+	TypeHidden  = 3 // for /api/admin/update/<ID>
 
 	// player represents
 	RepsNothing = 0 // zero-value; do not display on map
 	RepsPacman  = 1
 	RepsAnti    = 2 // anti-pacman; can consume pacman
-	RepsGhost   = 3 // 3... are ghosts
-	MaxGhost    = RepsGhost + 10 // permit max 10 ghosts
+	RepsGhost   = 3 // all ghosts are the same
+	RepsEdible  = 4
 
 	// user status
 	StatusGone = 0 // zero-value; out-of-game
@@ -88,6 +87,8 @@ func TypeString(t uint64) string {
 		return "Leader"
 	case TypeAdmin:
 		return "Admin"
+	case TypeHidden:
+		return "Hidden"
 	default:
 		return "Error"
 	}
@@ -101,8 +102,12 @@ func RepsString(r uint64) string {
 		return "Pacman"
 	case RepsAnti:
 		return "Antipac"
+	case RepsGhost:
+		return "Ghost"
+	case RepsEdible:
+		return "Edible"
 	default:
-		return fmt.Sprintf("Ghost %d", r - RepsGhost + 1)
+		return "Error"
 	}
 }
 

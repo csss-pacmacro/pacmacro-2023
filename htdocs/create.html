@@ -37,6 +37,22 @@
 		<p id="location-status">...</p>
 
 		<br>
+		<!-- set map bounds (form) -->
+		<h3>Map Bounds</h3>
+
+		<form action="/api/admin/bounds" method="POST">
+			<label for="id">Admin ID</label>
+			<input name="id" type="text"></input><br>
+			<label for="pass">Admin Password</label>
+			<input name="pass" type="password"></input><br>
+			<label for="min">Min (JSON Coordinate)</label>
+			<input name="min" type="text"></input><br>
+			<label for="max">Max (JSON Coordinate)</label>
+			<input name="max" type="text"></input><br>
+			<button type="submit">Submit</button>
+		</form>
+
+		<br>
 		<!-- set map scale -->
 		<h3>Map Scale</h3>
 
