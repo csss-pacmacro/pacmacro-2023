@@ -47,6 +47,8 @@ function pacmacro_init() {
 	window.pacmacro_players = {}; // prepare player map
 
 	// load images (for the canvas)
+	window.pacmacro_img_map             = new Image(EXPAND_X, EXPAND_Y);
+	window.pacmacro_img_map.src         = "static/game/map.svg";
 	window.pacmacro_img_pacman          = new Image(96, 96);
 	window.pacmacro_img_pacman.src      = "static/game/pacman.png";
 	window.pacmacro_img_pacman_flag     = new Image(96, 96);
@@ -140,6 +142,7 @@ function convertCoords(map, lat, lon) {
 
 	plot.x = ((lon - map.min.longitude) / dlon) * map.width;
 	plot.y = ((lat - map.min.latitude) / dlat) * map.height;
+	plot.y = map.height - plot.y;
 
 	console.log(`[${lat}, ${lon}] => [${plot.x}, ${plot.y}`);
 

@@ -22,6 +22,8 @@ window.onload = async () => {
 	let pacmacro_canvas = document.getElementById("pacmacro-canvas");
 	let pass = ""; // received upon window.prompt(...)
 
+	pacmacro_status.style.visibility = "hidden"; // hides debug
+
 	try {
 		let pacmacro_map = await fetch("/api/game/map.json");
 		window.pacmacro_map = await pacmacro_map.json();
@@ -43,9 +45,9 @@ window.onload = async () => {
 		if (window.pacmacro_ctx === undefined)
 			return;
 
-		// fill canvas with a black rectangle
-		window.pacmacro_ctx.fillStyle = "#000000";
-		window.pacmacro_ctx.fillRect(0, 0,
+		// fill canvas with map drawing
+		window.pacmacro_ctx.drawImage(
+			window.pacmacro_img_map, 0, 0,
 			window.pacmacro_ctx.canvas.width,
 			window.pacmacro_ctx.canvas.height);
 
@@ -55,7 +57,7 @@ window.onload = async () => {
 
 			const p = window.pacmacro_players[ID];
 			if (p.player.type == 3) // TypeHidden
-				continue;
+				return;
 			let img, text;
 
 			console.log(p);
@@ -67,14 +69,14 @@ window.onload = async () => {
 			case 2: // antipac
 				img = window.pacmacro_img_anti;
 				break;
+			case 3: // ghost
+				img = window.pacmacro_img_ghost;
+				break;
+			case 4: // edible
+				img = window.pacmacro_img_edible;
+				break;
 			default: // nothing; watcher; error
-				const ghost = p.player.reps;
-
-				// check if reps is valid ghost
-				if (ghost - 3 < 0 || ghost >= NREPS)
-					return;
-
-				img = window.pacmacro_img_ghost; // NOTE: get which ghost
+				return;
 			}
 
 			window.pacmacro_ctx.drawImage(img,
