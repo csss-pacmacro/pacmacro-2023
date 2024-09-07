@@ -46,10 +46,10 @@ func (p *Players) Init() {
 }
 
 func (p *Players) New(t uint64, name string, reps uint64, status uint64, pass string) string {
+	var ID string
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-
-	var ID string
 
 	for {
 		// create random session ID
@@ -126,12 +126,10 @@ func (p *Players) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/player/list.json
 func (p *Players) ServeList(w http.ResponseWriter, r *http.Request) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
 	ret := "[\n"
 	i := 0
 
+	p.mutex.Lock()
 	// get list of connected players
 	for ID, player := range p.players {
 		ret += player.Format(ID)
@@ -139,6 +137,7 @@ func (p *Players) ServeList(w http.ResponseWriter, r *http.Request) {
 			ret += ","
 		}
 	}
+	p.mutex.Unlock()
 
 	ret += "]"
 

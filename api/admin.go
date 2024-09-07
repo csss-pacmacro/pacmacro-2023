@@ -32,7 +32,10 @@ func (a *Admin) AuthorizePost(r *http.Request) bool {
 		return false
 	}
 
-	p    := a.players.Get(r.FormValue("id"))
+	a.players.mutex.Lock()
+	p := a.players.Get(r.FormValue("id"))
+	a.players.mutex.Unlock()
+
 	pass := r.FormValue("pass")
 
 	return p != nil && p.Type == TypeAdmin && pass == adminPassword
@@ -141,8 +144,12 @@ func (a *Admin) ServeSet(w http.ResponseWriter, r *http.Request) {
 	// /api/admin/set/
 	ID := r.URL.Path[15:] // portion after /api/admin/set/
 
-	// only admin users can set the game map
-	if player := a.players.Get(ID); player == nil || player.Type != TypeAdmin {
+	a.players.mutex.Lock()
+	player := a.players.Get(ID)
+	a.players.mutex.Unlock()
+
+	// only admin users can set the game map 
+	if player == nil || player.Type != TypeAdmin {
 		http.Error(w,
 			http.StatusText(http.StatusUnauthorized),
 			http.StatusUnauthorized)
@@ -268,7 +275,11 @@ func (a *Admin) ServeUpdate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	target_ID := r.URL.Path[18:] // portion after /api/admin/set/
+
+	a.players.mutex.Lock()
 	p = a.players.Get(target_ID)
+	a.players.mutex.Unlock()
+
 	if p == nil {
 		http.Error(w,
 			http.StatusText(http.StatusNotFound),

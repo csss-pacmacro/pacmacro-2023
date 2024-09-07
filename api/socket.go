@@ -47,13 +47,17 @@ func (s *Sockets) Find(id string) *Conn {
 }
 
 func (s *Sockets) Inform(id string) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
+	s.players.mutex.Lock()
 	p := s.players.Get(id)
 	if p == nil {
+		s.players.mutex.Unlock()
 		return // player doesn't exist
 	}
+	newMsgData := p.Format(id)
+	s.players.mutex.Unlock()
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	var msg Message
 	for _, conn := range s.conn {
@@ -67,7 +71,7 @@ func (s *Sockets) Inform(id string) {
 		}
 	}
 	msg.Command = CMD_INFORM
-	msg.Data = p.Format(id)
+	msg.Data = newMsgData
 
 	msg_json, err := json.Marshal(msg)
 	if err != nil {
@@ -102,11 +106,12 @@ func (s *Sockets) Informs() []string {
 		if p == nil {
 			continue
 		}
+		newMsgData := p.Format(conn.id)
 
 		var msg Message
 		msg.Coord = conn.coord
 		msg.Command = CMD_INFORM
-		msg.Data = p.Format(conn.id)
+		msg.Data = newMsgData
 
 		msg_json, err := json.Marshal(msg)
 		if err != nil {
@@ -150,19 +155,22 @@ func (s *Sockets) Move(conn_i int, coord Coordinate) {
 }
 
 func (s *Sockets) Connect(c *ws.Conn, id string) int {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
+	s.players.mutex.Lock()
 	p := s.players.Get(id)
 	if p == nil {
+		s.players.mutex.Unlock()
 		return -1 // player doesn't exist
 	}
+	s.players.mutex.Unlock()
 
 	var conn *Conn
 	conn = new(Conn)
 	conn.c = c
 	conn.id = id
 	conn_i := -1
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// iterate over active connections
 	for i, _ := range s.conn {
@@ -192,13 +200,19 @@ func (s *Sockets) Disconnect(conn_i int) {
 // WS /api/ws/<ID>
 func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ID := r.URL.Path[8:]
+
+	// get player password by id
+	s.players.mutex.Lock()
 	player := s.players.Get(ID)
 	if player == nil {
 		http.Error(w,
 			http.StatusText(http.StatusBadRequest),
 			http.StatusBadRequest)
+		s.players.mutex.Unlock()
 		return
 	}
+	playerPassword := player.pass
+	s.players.mutex.Unlock()
 
 	// attempt to upgrade connection to websocket connection
 	conn, err := Upgrader.Upgrade(w, r, nil)
@@ -212,7 +226,7 @@ func (s *Sockets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// attempt to log in
 	msgType, msg, err := conn.ReadMessage()
-	if err != nil || msgType != ws.TextMessage || !player.Login(string(msg)) {
+	if err != nil || msgType != ws.TextMessage || !(playerPassword == string(msg)) {
 		//fmt.Printf("Sockets\tServeHTTP (/api/ws/):\tID %q: Bad password.\n", ID)
 		return
 	}
