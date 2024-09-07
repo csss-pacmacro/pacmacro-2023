@@ -48,7 +48,6 @@ func (g *Game) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/game/map.json
 func (g *Game) ServeMap(w http.ResponseWriter, r *http.Request) {
-	// TODO: does go have exceptions?
 	g.players.mutex.Lock()
 	JSON, err := json.Marshal(g)
 	g.players.mutex.Unlock()
