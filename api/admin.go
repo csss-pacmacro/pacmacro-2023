@@ -146,15 +146,15 @@ func (a *Admin) ServeSet(w http.ResponseWriter, r *http.Request) {
 
 	a.players.mutex.Lock()
 	player := a.players.Get(ID)
-	a.players.mutex.Unlock()
-
 	// only admin users can set the game map 
 	if player == nil || player.Type != TypeAdmin {
 		http.Error(w,
 			http.StatusText(http.StatusUnauthorized),
 			http.StatusUnauthorized)
+			a.players.mutex.Unlock()
 		return
 	}
+	a.players.mutex.Unlock()
 
 	// no gameplay should occur during the setting of the map
 	a.mutex.Lock()
