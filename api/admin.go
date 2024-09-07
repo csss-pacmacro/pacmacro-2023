@@ -33,8 +33,9 @@ func (a *Admin) AuthorizePost(r *http.Request) bool {
 	}
 
 	a.players.mutex.Lock()
+	defer a.players.mutex.Unlock()
+
 	p := a.players.Get(r.FormValue("id"))
-	a.players.mutex.Unlock()
 
 	pass := r.FormValue("pass")
 
